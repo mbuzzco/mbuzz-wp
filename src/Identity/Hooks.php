@@ -51,7 +51,6 @@ final class Hooks
         Mbuzz::conversion('signup', [
             'user_id'        => (string) $userId,
             'is_acquisition' => true,
-            'identifier'     => ['email' => (string) $user->user_email],
         ]);
     }
 

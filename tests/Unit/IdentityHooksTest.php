@@ -110,13 +110,16 @@ class IdentityHooksTest extends TestCase
         $this->assertStringEndsWith('/identify', $this->captured[0]['url']);
         $this->assertSame('99', $this->captured[0]['payload']['user_id']);
 
-        // Second call: signup conversion with is_acquisition + email identifier.
+        // Second call: signup conversion with is_acquisition. The email
+        // already flowed via the identify call above; backend's Identity
+        // row carries it. No need to re-send under the (deprecated)
+        // `identifier` field.
         $this->assertStringEndsWith('/conversions', $this->captured[1]['url']);
         $conversion = $this->captured[1]['payload']['conversion'];
         $this->assertSame('signup', $conversion['conversion_type']);
         $this->assertSame('99', $conversion['user_id']);
         $this->assertTrue($conversion['is_acquisition']);
-        $this->assertSame('new@user.com', $conversion['identifier']['email']);
+        $this->assertArrayNotHasKey('identifier', $conversion);
     }
 
     public function testOnRegisterSkipsWhenUserdataReturnsFalse(): void
