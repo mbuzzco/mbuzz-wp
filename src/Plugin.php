@@ -11,6 +11,8 @@ declare(strict_types=1);
 namespace Mbuzz\WP;
 
 use Mbuzz\Mbuzz;
+use Mbuzz\WP\Identity\Hooks as IdentityHooks;
+use Mbuzz\WP\Integrations\WooCommerce;
 use Mbuzz\WP\Settings\Page as SettingsPage;
 use Mbuzz\WP\Settings\Repository as SettingsRepository;
 
@@ -55,6 +57,11 @@ final class Plugin
         // Admin: settings page + sanitization.
         add_action('admin_init', [SettingsPage::class, 'registerSettings']);
         add_action('admin_menu', [SettingsPage::class, 'registerMenu']);
+
+        // Identity + integrations register their own hooks on plugins_loaded
+        // — after the SDK is booted so they can safely call Mbuzz::*.
+        add_action('plugins_loaded', [IdentityHooks::class, 'register'], 10);
+        add_action('plugins_loaded', [WooCommerce::class, 'register'], 10);
     }
 
     public function sdkReady(): bool
