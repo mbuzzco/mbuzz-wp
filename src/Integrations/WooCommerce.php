@@ -105,7 +105,6 @@ final class WooCommerce
             'revenue'             => -$amount,
             'currency'            => (string) $order->get_currency(),
             'inherit_acquisition' => true,
-            'identifier'          => self::identifierFor($order),
             'properties'          => [
                 'original_order_id' => $order->get_id(),
                 'refund_id'         => $refundId,
@@ -132,7 +131,6 @@ final class WooCommerce
             'currency'            => (string) $order->get_currency(),
             'is_acquisition'      => $isFirst,
             'inherit_acquisition' => ! $isFirst,
-            'identifier'          => self::identifierFor($order),
             'properties'          => self::orderProperties($order),
         ]);
 
@@ -207,18 +205,25 @@ final class WooCommerce
     }
 
     /**
-     * @return array<string, string>
+     * Stable per-customer identifier for the backend.
+     *
+     *   - Logged-in WP user → numeric user_id as a string.
+     *   - Guest with a billing email → the email.
+     *
+     * Both flow as `user_id` so the backend (multibuzz, 1.x+) can
+     * find-or-create a single Identity row scoped to this account.
+     * Cookieless guest checkouts now attribute end-to-end without a
+     * visitor cookie having been written by the JS pixel.
      */
-    private static function identifierFor(object $order): array
-    {
-        $email = (string) $order->get_billing_email();
-        return $email !== '' ? ['email' => $email] : [];
-    }
-
     private static function stringUserId(object $order): ?string
     {
         $id = (int) $order->get_user_id();
-        return $id > 0 ? (string) $id : null;
+        if ($id > 0) {
+            return (string) $id;
+        }
+
+        $email = (string) $order->get_billing_email();
+        return $email !== '' ? $email : null;
     }
 
     private static function resolveOrder(int $orderId): ?object

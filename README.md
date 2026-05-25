@@ -66,7 +66,7 @@ Roadmap follows `lib/specs/wordpress-plugin.md` in the SDK repo:
 - [x] Scope-stable theme helpers (§2)
 - [x] onSuccess/onError observers wired to diagnostics transient (§4)
 - [x] Identity hooks: wp_login, user_register (+ signup conversion), profile_update (§5)
-- [x] WooCommerce: thankyou + processing + completed dedupe, refunds, first-paid detection, HPOS-safe meta (§6)
+- [x] WooCommerce: thankyou + processing + completed dedupe, refunds, first-paid detection, HPOS-safe meta, cookieless guest attribution via billing email (§6)
 - [ ] Settings page UI: form, validation, diagnostics card (§4)
 - [ ] WooCommerce Subscriptions renewal hook (§6 — deferred, paid extension)
 - [ ] Other plugin integrations: EDD, CF7, Gravity, WPForms, Fluent, MemberPress, LearnDash (§7)

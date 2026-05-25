@@ -125,7 +125,7 @@ class WooCommerceTest extends TestCase
         $this->assertSame(99.50, $conversion['revenue']);
         $this->assertTrue($conversion['is_acquisition']);
         $this->assertFalse($conversion['inherit_acquisition']);
-        $this->assertSame('cust@example.com', $conversion['identifier']['email']);
+        $this->assertArrayNotHasKey('identifier', $conversion);
     }
 
     public function testThankYouSetsOrderMetaWithReturnedConversionId(): void
@@ -210,18 +210,40 @@ class WooCommerceTest extends TestCase
         $this->assertTrue($conversion['inherit_acquisition']);
     }
 
-    public function testGuestCheckoutIsTreatedAsAcquisition(): void
+    public function testGuestCheckoutSendsEmailAsUserId(): void
     {
-        $this->makeOrder(200, ['get_user_id' => 0]);
+        // Guest checkout: WP user_id=0, billing email present.
+        // We now send the email as user_id so the backend can find-or-create
+        // an Identity scoped to it — works even with no visitor cookie.
+        $this->makeOrder(200, [
+            'get_user_id'       => 0,
+            'get_billing_email' => 'guest@example.com',
+        ]);
 
         WooCommerce::onThankYou(200);
 
         $conversion = $this->captured[0]['payload']['conversion'];
-        // No user_id in payload for guest checkouts.
-        $this->assertArrayNotHasKey('user_id', $conversion);
+        $this->assertSame('guest@example.com', $conversion['user_id']);
         $this->assertTrue($conversion['is_acquisition']);
-        // Email identifier still flows so backend can stitch later.
-        $this->assertSame('cust@example.com', $conversion['identifier']['email']);
+        $this->assertArrayNotHasKey('identifier', $conversion);
+    }
+
+    public function testGuestCheckoutWithNoEmailOmitsUserIdEntirely(): void
+    {
+        // Defensive: no WP user, no billing email → nothing to use as user_id.
+        // Plugin sends null; SDK proceeds with visitor cookie alone (anonymous
+        // attribution). Tested with cookie present, since the cookie carries
+        // the only identifier the backend will see for this checkout.
+        $this->makeOrder(210, [
+            'get_user_id'       => 0,
+            'get_billing_email' => '',
+        ]);
+
+        WooCommerce::onThankYou(210);
+
+        $this->assertCount(1, $this->captured);
+        $conversion = $this->captured[0]['payload']['conversion'];
+        $this->assertArrayNotHasKey('user_id', $conversion);
     }
 
     public function testSkipFilterShortCircuitsTracking(): void
