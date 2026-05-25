@@ -1,0 +1,40 @@
+# Dependencies
+/vendor/
+
+# Composer
+composer.lock
+composer.phar
+
+# php-scoper build output
+/build/
+/dist/
+*.zip
+
+# PHPUnit
+.phpunit.cache/
+.phpunit.result.cache
+
+# wp-env
+.wp-env.override.json
+/wordpress/
+/tests/wordpress/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Env
+.env
+.env.local
+
+# Coverage
+/coverage/
+.coverage
+clover.xml
