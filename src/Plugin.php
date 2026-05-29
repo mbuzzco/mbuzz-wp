@@ -12,9 +12,11 @@ namespace Mbuzz\WP;
 
 use Mbuzz\Mbuzz;
 use Mbuzz\WP\Identity\Hooks as IdentityHooks;
+use Mbuzz\WP\Integrations\ContactForm7;
 use Mbuzz\WP\Integrations\WooCommerce;
 use Mbuzz\WP\Settings\Page as SettingsPage;
 use Mbuzz\WP\Settings\Repository as SettingsRepository;
+use Mbuzz\WP\Visitor\CookieBootstrap;
 
 final class Plugin
 {
@@ -62,6 +64,7 @@ final class Plugin
         // — after the SDK is booted so they can safely call Mbuzz::*.
         add_action('plugins_loaded', [IdentityHooks::class, 'register'], 10);
         add_action('plugins_loaded', [WooCommerce::class, 'register'], 10);
+        add_action('plugins_loaded', [ContactForm7::class, 'register'], 10);
     }
 
     public function sdkReady(): bool
@@ -94,8 +97,29 @@ final class Plugin
         if (defined('XMLRPC_REQUEST') && XMLRPC_REQUEST) {
             return;
         }
+        if ($this->shouldSkipForAdmin()) {
+            return;
+        }
+
+        // Server-side-only deployments have no JS pixel to mint the visitor
+        // cookie, and the SDK refuses to mint it itself. Do it here so
+        // initFromRequest() has a visitor to create a session for.
+        CookieBootstrap::ensureVisitorCookie();
 
         Mbuzz::initFromRequest();
+    }
+
+    /**
+     * Honor the "Track logged-in admins" setting (spec §4). Off by default so
+     * internal QA navigation doesn't pollute attribution data.
+     */
+    private function shouldSkipForAdmin(): bool
+    {
+        if (SettingsRepository::current()['track_admins']) {
+            return false;
+        }
+
+        return is_user_logged_in() && current_user_can('manage_options');
     }
 
     /**
