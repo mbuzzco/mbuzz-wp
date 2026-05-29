@@ -44,7 +44,27 @@ To run against a live WordPress, symlink the plugin into a `wp-env` install:
 ln -s "$(pwd)" /path/to/wordpress/wp-content/plugins/mbuzz-attribution
 ```
 
-Or use the `wp-env` integration once `tests/Integration/` is added.
+### Dev environment (wp-env)
+
+A `.wp-env.json` is included — it boots WordPress with this plugin **and Contact
+Form 7** preloaded, `WP_DEBUG_LOG` on, and `MBUZZ_DEBUG` on. Requires Docker +
+[`@wordpress/env`](https://www.npmjs.com/package/@wordpress/env).
+
+```sh
+# Put your sk_test_ key where it won't be committed (.wp-env.override.json is gitignored):
+cp .wp-env.override.json.example .wp-env.override.json
+# edit .wp-env.override.json → set MBUZZ_API_KEY to your sk_test_ key
+
+npx wp-env start          # http://localhost:8888  (wp-admin: admin / password)
+```
+
+Verify a lead end-to-end:
+
+1. Create a CF7 form (Contact → Forms) with an email field and embed it on a page.
+2. Load the page (mints `_mbuzz_vid`, creates a session) and submit the form.
+3. Check the conversion landed: the mbuzz dashboard for the test account, or
+   `npx wp-env run cli wp eval 'var_dump(get_transient("mbuzz_attribution_last_call"));'`.
+   On failure, `MBUZZ_DEBUG` logs the API error to `wp-content/debug.log`.
 
 ## Configuration
 
@@ -67,9 +87,12 @@ Roadmap follows `lib/specs/wordpress-plugin.md` in the SDK repo:
 - [x] onSuccess/onError observers wired to diagnostics transient (§4)
 - [x] Identity hooks: wp_login, user_register (+ signup conversion), profile_update (§5)
 - [x] WooCommerce: thankyou + processing + completed dedupe, refunds, first-paid detection, HPOS-safe meta, cookieless guest attribution via billing email (§6)
+- [x] Server-side visitor bootstrap: plugin mints `_mbuzz_vid` on `template_redirect` so sessions/touchpoints record without a JS pixel (the SDK never mints it itself)
+- [x] `track_admins` gate honored in the request path — logged-in admins bypass tracking by default (§4)
+- [x] Contact Form 7: `wpcf7_submit` → `lead` conversion, auto-detected email → `user_id`, form id/title in properties, filter overrides (§7)
 - [ ] Settings page UI: form, validation, diagnostics card (§4)
 - [ ] WooCommerce Subscriptions renewal hook (§6 — deferred, paid extension)
-- [ ] Other plugin integrations: EDD, CF7, Gravity, WPForms, Fluent, MemberPress, LearnDash (§7)
+- [ ] Other plugin integrations: EDD, Gravity, WPForms, Fluent, MemberPress, LearnDash (§7)
 - [ ] Tracked Button Gutenberg block (§8)
 - [ ] WP-CLI commands: status, test, flush, identify, conversion (§9)
 - [ ] WP Consent API gating (§11)

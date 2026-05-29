@@ -1,0 +1,6 @@
+{
+  "comment": "Copy to .wp-env.override.json (gitignored) and drop in your sk_test_ key. Never commit a real key.",
+  "config": {
+    "MBUZZ_API_KEY": "sk_test_replace_me"
+  }
+}
