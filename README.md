@@ -4,7 +4,58 @@ WordPress plugin for the [Mbuzz](https://mbuzz.co) multi-touch attribution platf
 
 Ships to WP.org under the slug **`mbuzz-attribution`** (the user-facing plugin name) — `mbuzz-wp` is just the repo name, matching the `mbuzz-php` / `mbuzz-ruby` SDK repos.
 
-**Status: 0.1.0-alpha — scaffold only.** Wiring per `lib/specs/wordpress-plugin.md` (in the SDK repo) is in progress; see the spec for the full design and the per-section TODOs below.
+**Status: 0.1.0-alpha.** Server-side sessions, Contact Form 7 leads, identity stitching, and WooCommerce conversions are wired and verified end-to-end. The settings UI, the remaining form-plugin integrations, and WP.org packaging are in progress. Full design + roadmap: `lib/specs/wordpress-plugin.md` (in the SDK repo) and the checklist below.
+
+## Getting started
+
+mbuzz tracks the whole marketing journey **server-side** — every page view becomes a touchpoint, and form submissions and purchases become attributed conversions — with no JS pixel required. The transaction itself can even happen in another system (a CRM, billing, the billing system): as long as it later reports the conversion with the same email, mbuzz links it back to the marketing journey this plugin captured.
+
+### Requirements
+
+- WordPress 6.5+ and PHP 8.1+
+- A [mbuzz](https://mbuzz.co) account and an API key — use an `sk_test_…` key to trial, `sk_live_…` for production
+
+### 1. Install the plugin
+
+Until the WordPress.org listing is live, install from the release zip:
+
+1. Download the latest `mbuzz-attribution.zip` from [GitHub releases](https://github.com/mbuzzco/mbuzz-wp/releases).
+2. In wp-admin: **Plugins → Add New → Upload Plugin**, choose the zip, **Install Now**, then **Activate**.
+
+Building from source instead? Run `composer install --no-dev -o` and zip the plugin folder — `vendor/` must be included.
+
+### 2. Add your API key
+
+The settings screen is still being built, so configure via `wp-config.php` (above the `/* That's all, stop editing! */` line):
+
+```php
+define('MBUZZ_API_KEY', 'sk_live_…');
+```
+
+Start with an `sk_test_*` key and confirm everything flows into the **Test** view of your dashboard, then switch to `sk_live_*`.
+
+### 3. That's it — here's what's tracked automatically
+
+| What | How |
+|---|---|
+| **Page touchpoints** | Every front-end page view creates a server-side session (channel, referrer, UTM). Logged-in admins are excluded by default. |
+| **Form leads** | Contact Form 7 submissions fire a `lead` conversion — the email is captured, the submitter is stitched to an identity, and every form field is attached to the conversion. |
+| **Identity** | WordPress logins and registrations link the visitor to a known user. |
+| **WooCommerce** | Purchases, refunds, and first-order acquisition (when WooCommerce is active). |
+
+### 4. Verify
+
+Submit one of your forms, then open your mbuzz dashboard (the **Test** view if you used an `sk_test_*` key) — you should see the new session and the `lead` conversion. Add `define('MBUZZ_DEBUG', true);` to log every API call to `wp-content/debug.log` while testing.
+
+### Custom tracking (themes & snippets)
+
+Three procedural helpers are available anywhere in your theme or a snippet plugin:
+
+```php
+mbuzz_event('brochure_download', ['guide' => 'fees-2026']);
+mbuzz_conversion('enquiry', ['user_id' => $email]);
+mbuzz_identify($email, ['first_name' => $first, 'phone' => $phone]);
+```
 
 ## Repo layout
 
@@ -90,7 +141,7 @@ Roadmap follows `lib/specs/wordpress-plugin.md` in the SDK repo:
 - [x] Server-side visitor bootstrap: plugin mints `_mbuzz_vid` on `template_redirect` so sessions/touchpoints record without a JS pixel (the SDK never mints it itself)
 - [x] `track_admins` gate honored in the request path — logged-in admins bypass tracking by default (§4)
 - [x] Contact Form 7: `wpcf7_submit` → `lead` conversion, auto-detected email → `user_id`, form id/title in properties, filter overrides (§7)
-- [ ] Settings page UI: form, validation, diagnostics card (§4)
+- [x] Settings page UI: API key field, enable/track-admins/debug toggles, diagnostics card — key settable in wp-admin, no wp-config edit needed (§4)
 - [ ] WooCommerce Subscriptions renewal hook (§6 — deferred, paid extension)
 - [ ] Other plugin integrations: EDD, Gravity, WPForms, Fluent, MemberPress, LearnDash (§7)
 - [ ] Tracked Button Gutenberg block (§8)
