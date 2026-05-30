@@ -26,13 +26,9 @@ Building from source instead? Run `composer install --no-dev -o` and zip the plu
 
 ### 2. Add your API key
 
-The settings screen is still being built, so configure via `wp-config.php` (above the `/* That's all, stop editing! */` line):
+Open the **Mbuzz** menu in your wp-admin sidebar (funnel icon), paste your key into the **API key** field, and **Save Changes**.
 
-```php
-define('MBUZZ_API_KEY', 'sk_live_…');
-```
-
-Start with an `sk_test_*` key and confirm everything flows into the **Test** view of your dashboard, then switch to `sk_live_*`.
+Start with an `sk_test_*` key and confirm everything flows into the **Test** view of your dashboard, then switch to `sk_live_*`. Managed hosts and multisite can instead lock the key via a `wp-config.php` constant (`define('MBUZZ_API_KEY', 'sk_live_…');`), which the settings field then shows as locked.
 
 ### 3. That's it — here's what's tracked automatically
 

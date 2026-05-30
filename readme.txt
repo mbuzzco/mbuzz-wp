@@ -4,7 +4,7 @@ Tags: attribution, analytics, woocommerce, marketing, conversion-tracking
 Requires at least: 6.5
 Tested up to: 6.7
 Requires PHP: 8.1
-Stable tag: 0.1.1-alpha
+Stable tag: 0.1.2-alpha
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -38,7 +38,7 @@ no extra JavaScript on your pages beyond the existing pixel.
 
 1. Upload the plugin to `/wp-content/plugins/mbuzz-attribution/`.
 2. Activate it through the **Plugins** screen.
-3. Visit **Settings → Mbuzz** and paste your API key.
+3. Open the **Mbuzz** menu in the wp-admin sidebar and paste your API key.
 
 == Frequently Asked Questions ==
 
@@ -54,6 +54,9 @@ Reporting lives at app.mbuzz.co. This plugin handles capture and configuration
 only.
 
 == Changelog ==
+
+= 0.1.2-alpha =
+* Top-level **Mbuzz** menu in the wp-admin sidebar (funnel icon) so the settings screen is easy to find, instead of buried under Settings.
 
 = 0.1.1-alpha =
 * Settings → Mbuzz screen: API key field, enable/track-admins/debug toggles, diagnostics card. Key can now be set in wp-admin (no wp-config edit required).

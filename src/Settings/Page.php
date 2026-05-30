@@ -21,12 +21,16 @@ final class Page
 
     public static function registerMenu(): void
     {
-        add_options_page(
+        // Top-level menu so it's discoverable in the sidebar (a Settings
+        // submenu is invisible under a collapsed, plugin-crowded menu).
+        add_menu_page(
             __('Mbuzz Attribution', 'mbuzz-attribution'),
             __('Mbuzz', 'mbuzz-attribution'),
             'manage_options',
             self::MENU_SLUG,
-            [self::class, 'render']
+            [self::class, 'render'],
+            'dashicons-filter', // funnel — matches the mbuzz mark
+            58 // just above Appearance
         );
     }
 
