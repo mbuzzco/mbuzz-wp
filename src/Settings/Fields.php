@@ -27,8 +27,19 @@ final class Fields
 
         $clean = Repository::defaults();
 
-        if (isset($input['api_key']) && ! Repository::isLocked('api_key')) {
-            $clean['api_key'] = sanitize_text_field((string) $input['api_key']);
+        if (! Repository::isLocked('api_key') && isset($input['api_key'])) {
+            $submitted = sanitize_text_field((string) $input['api_key']);
+            if ($submitted !== '') {
+                $clean['api_key'] = $submitted;
+            } else {
+                // Blank submit = "keep the current key". The field is rendered
+                // empty (never echoes the saved key back), so an empty value
+                // must not wipe a configured key.
+                $existing = get_option(Repository::OPTION_KEY, []);
+                $clean['api_key'] = (is_array($existing) && isset($existing['api_key']))
+                    ? (string) $existing['api_key']
+                    : '';
+            }
         }
         if (! Repository::isLocked('enabled')) {
             $clean['enabled'] = ! empty($input['enabled']);

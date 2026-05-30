@@ -4,7 +4,7 @@ Tags: attribution, analytics, woocommerce, marketing, conversion-tracking
 Requires at least: 6.5
 Tested up to: 6.7
 Requires PHP: 8.1
-Stable tag: 0.1.0-alpha
+Stable tag: 0.1.1-alpha
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -55,5 +55,8 @@ only.
 
 == Changelog ==
 
+= 0.1.1-alpha =
+* Settings → Mbuzz screen: API key field, enable/track-admins/debug toggles, diagnostics card. Key can now be set in wp-admin (no wp-config edit required).
+
 = 0.1.0-alpha =
-* Initial scaffold.
+* Server-side visitor bootstrap, page-session touchpoints, Contact Form 7 lead conversions with identity stitching, WooCommerce conversions, identity hooks.

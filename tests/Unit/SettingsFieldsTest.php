@@ -55,6 +55,24 @@ class SettingsFieldsTest extends TestCase
         $this->assertSame('login', $clean['identify_at']);
     }
 
+    public function testSanitizeUpdatesKeyWhenProvided(): void
+    {
+        $clean = Fields::sanitize(['api_key' => 'sk_live_new']);
+
+        $this->assertSame('sk_live_new', $clean['api_key']);
+    }
+
+    public function testSanitizePreservesExistingKeyWhenSubmittedBlank(): void
+    {
+        // The field renders empty (never echoes the saved key); a blank save
+        // must keep the configured key rather than wipe it.
+        Functions\when('get_option')->justReturn(['api_key' => 'sk_live_existing']);
+
+        $clean = Fields::sanitize(['api_key' => '']);
+
+        $this->assertSame('sk_live_existing', $clean['api_key']);
+    }
+
     public function testSanitizeSplitsSkipPathsByLine(): void
     {
         $clean = Fields::sanitize([
