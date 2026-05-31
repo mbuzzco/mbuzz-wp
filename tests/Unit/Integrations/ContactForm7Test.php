@@ -8,46 +8,38 @@ use Brain\Monkey;
 use Brain\Monkey\Functions;
 use Mbuzz\Mbuzz;
 use Mbuzz\WP\Integrations\ContactForm7;
+use Mbuzz\WP\Tracking\FieldMap;
+use Mbuzz\WP\Tracking\Roles;
+use Mbuzz\WP\Tracking\TrackAs;
 use Mockery;
 use PHPUnit\Framework\TestCase;
 
 /**
- * Contact Form 7 lead conversion. WPCF7_ContactForm mocked via Mockery;
- * posted data injected through the test seam; SDK driven end-to-end through
- * the transport-capture seam.
- *
- * A successful lead with an email makes TWO API calls — /identify (so the
- * lead stitches to an Identity) then /conversions — so assertions locate
- * captures by URL rather than by index.
+ * CF7 runtime adapter. Gates on submission status, builds a Cf7FormSource
+ * (posted data + page from the container post), and delegates to the engine,
+ * which is map-driven and opt-in. SDK driven via the transport-capture seam.
  */
 class ContactForm7Test extends TestCase
 {
-    /** @var array<int, array{method:string, url:string, payload:?array, body:array}> */
+    /** @var array<int, array{url:string, payload:?array}> */
     private array $captured = [];
 
     protected function setUp(): void
     {
         Monkey\setUp();
         $this->captured = [];
-
-        // In production the cookie is present from the visitor's first page
-        // load (minted by CookieBootstrap). The SDK rejects calls with neither
-        // visitor_id nor user_id, so no-email tests need it too.
         $_COOKIE['_mbuzz_vid'] = str_repeat('a', 64);
 
         Functions\when('add_action')->justReturn(true);
         Functions\when('apply_filters')->alias(static fn ($_name, $value) => $value);
+        Functions\when('get_post_meta')->justReturn(''); // no map by default
+        Functions\when('get_the_title')->justReturn('Downtown Office');
+        Functions\when('get_permalink')->justReturn('https://example.com/locations/downtown/');
 
         Mbuzz::init(['api_key' => 'sk_test_cf7']);
         Mbuzz::getClient()->setTransport(function ($method, $url, $payload) {
-            $body = ['conversion' => ['id' => 'conv_1']];
-            $this->captured[] = [
-                'method'  => $method,
-                'url'     => $url,
-                'payload' => $payload !== null ? json_decode($payload, true) : null,
-                'body'    => $body,
-            ];
-            return ['status' => 200, 'body' => $body];
+            $this->captured[] = ['url' => $url, 'payload' => $payload !== null ? json_decode($payload, true) : null];
+            return ['status' => 200, 'body' => ['conversion' => ['id' => 'conv_1']]];
         });
     }
 
@@ -60,7 +52,7 @@ class ContactForm7Test extends TestCase
         unset($_COOKIE['_mbuzz_vid']);
     }
 
-    private function form(int $id = 6, string $title = 'Contact'): object
+    private function form(int $id = 7, string $title = 'Enquiry'): object
     {
         $form = Mockery::mock();
         $form->shouldReceive('id')->andReturn($id);
@@ -76,6 +68,20 @@ class ContactForm7Test extends TestCase
         ContactForm7::setPostedDataProviderForTests(static fn () => $posted);
     }
 
+    private function withMap(): void
+    {
+        Functions\when('get_post_meta')->justReturn([
+            FieldMap::K_ENABLED         => true,
+            FieldMap::K_TRACK_AS        => TrackAs::CONVERSION,
+            FieldMap::K_TYPE            => 'enquiry',
+            FieldMap::K_CAPTURE_PAGE_AS => 'location',
+            FieldMap::K_FIELDS          => [
+                'CustomerRef' => [FieldMap::K_ROLE => Roles::USER_ID],
+                'CustomerEmail' => [FieldMap::K_ROLE => Roles::TRAIT, FieldMap::K_KEY => 'email'],
+            ],
+        ]);
+    }
+
     private function payloadFor(string $suffix): ?array
     {
         foreach ($this->captured as $c) {
@@ -86,198 +92,52 @@ class ContactForm7Test extends TestCase
         return null;
     }
 
-    private function conversion(): array
+    public function testNonSuccessStatusFiresNothing(): void
     {
-        return $this->payloadFor('/conversions')['conversion'];
-    }
+        $this->withMap();
+        $this->withPosted(['CustomerRef' => 'CUST-9', 'CustomerEmail' => 'jo@example.com']);
 
-    private function identify(): ?array
-    {
-        return $this->payloadFor('/identify');
-    }
-
-    public function testMailSentFiresLeadConversionWithDetectedEmail(): void
-    {
-        $this->withPosted([
-            'your-name'  => 'Jane Parent',
-            'your-email' => 'jane@example.com',
-            'your-phone' => '0400000000',
-        ]);
-
-        ContactForm7::onSubmit($this->form(6, 'Contact'), ['status' => 'mail_sent']);
-
-        $this->assertSame('lead', $this->conversion()['conversion_type']);
-        $this->assertSame('jane@example.com', $this->conversion()['user_id']);
-        $this->assertSame(6, $this->conversion()['properties']['form_id']);
-        $this->assertSame('Contact', $this->conversion()['properties']['form_title']);
-    }
-
-    public function testIdentifyFiresWithEmailAndCanonicalTraits(): void
-    {
-        $this->withPosted([
-            'your-name'  => 'Jane Parent',
-            'your-email' => 'jane@example.com',
-            'your-phone' => '0400000000',
-        ]);
-
-        ContactForm7::onSubmit($this->form(), ['status' => 'mail_sent']);
-
-        $identify = $this->identify();
-        $this->assertNotNull($identify, 'a lead with an email must identify');
-        $this->assertSame('jane@example.com', $identify['user_id']);
-        $this->assertSame('jane@example.com', $identify['traits']['email']);
-        $this->assertSame('0400000000', $identify['traits']['phone']);
-        // Single full-name field → non-canonical 'name' trait.
-        $this->assertSame('Jane Parent', $identify['traits']['name']);
-        $this->assertArrayNotHasKey('first_name', $identify['traits']);
-    }
-
-    public function testRsvpFormMapsFirstAndLastNameTraits(): void
-    {
-        // Open Day RSVP forms split the name and use custom field names.
-        $this->withPosted([
-            'FirstName'   => 'Sam',
-            'LastName'    => 'Carer',
-            'CustomerEmail'       => 'sam@example.com',
-            'MobilePhone' => '0411111111',
-            'attendees'         => '2',
-        ]);
-
-        ContactForm7::onSubmit($this->form(9, 'Eastside Open Day RSVP'), ['status' => 'mail_sent']);
-
-        $this->assertSame('sam@example.com', $this->conversion()['user_id']);
-
-        $identify = $this->identify();
-        $this->assertSame('Sam', $identify['traits']['first_name']);
-        $this->assertSame('Carer', $identify['traits']['last_name']);
-        $this->assertSame('0411111111', $identify['traits']['phone']);
-        $this->assertArrayNotHasKey('name', $identify['traits']);
-    }
-
-    public function testAllSubmittedFieldsPassThroughToProperties(): void
-    {
-        $this->withPosted([
-            'FirstName'   => 'Sam',
-            'LastName'    => 'Carer',
-            'CustomerEmail'       => 'sam@example.com',
-            'MobilePhone' => '0411111111',
-            'attendees'         => '2',
-            '_wpcf7'            => '9',
-            '_wpcf7_unit_tag'   => 'wpcf7-f2265-o1',
-        ]);
-
-        ContactForm7::onSubmit($this->form(9, 'Eastside Open Day RSVP'), ['status' => 'mail_sent']);
-
-        $props = $this->conversion()['properties'];
-        $this->assertSame('Sam', $props['FirstName']);
-        $this->assertSame('2', $props['attendees']);
-        $this->assertSame('sam@example.com', $props['CustomerEmail']);
-        // Internal CF7 fields must not leak into properties.
-        $this->assertArrayNotHasKey('_wpcf7', $props);
-        $this->assertArrayNotHasKey('_wpcf7_unit_tag', $props);
-        // Form meta still present and uncorrupted.
-        $this->assertSame(9, $props['form_id']);
-    }
-
-    public function testDemoModeAlsoConverts(): void
-    {
-        $this->withPosted(['your-email' => 'demo@example.com']);
-
-        ContactForm7::onSubmit($this->form(), ['status' => 'demo_mode']);
-
-        $this->assertSame('lead', $this->conversion()['conversion_type']);
-    }
-
-    public function testNonSuccessStatusDoesNotConvertOrIdentify(): void
-    {
-        $this->withPosted(['your-email' => 'jane@example.com']);
-
-        ContactForm7::onSubmit($this->form(), ['status' => 'validation_failed']);
-        ContactForm7::onSubmit($this->form(), ['status' => 'spam']);
-        ContactForm7::onSubmit($this->form(), []); // no status key
+        ContactForm7::onSubmit($this->form(), [ContactForm7::RESULT_STATUS => 'validation_failed']);
+        ContactForm7::onSubmit($this->form(), []); // no status
 
         $this->assertCount(0, $this->captured);
     }
 
-    public function testPhoneOnlyFormSkipsIdentifyAndOmitsUserId(): void
+    public function testUnmappedFormFiresNothing(): void
     {
-        // No email field → nothing to identify by; conversion still fires,
-        // attributed via the visitor cookie alone.
+        // get_post_meta returns '' (no map) → opt-in → nothing, even on success.
+        $this->withPosted(['CustomerEmail' => 'jo@example.com']);
+
+        ContactForm7::onSubmit($this->form(), [ContactForm7::RESULT_STATUS => ContactForm7::STATUS_MAIL_SENT]);
+
+        $this->assertCount(0, $this->captured);
+    }
+
+    public function testConfiguredFormConvertsWithPageCapture(): void
+    {
+        $this->withMap();
         $this->withPosted([
-            '_wpcf7'     => '9',
-            'your-phone' => '0422222222',
+            'CustomerRef'                       => 'CUST-9',
+            'CustomerEmail'                       => 'jo@example.com',
+            ContactForm7::FIELD_CONTAINER_POST  => '12',
         ]);
 
-        ContactForm7::onSubmit($this->form(), ['status' => 'mail_sent']);
+        ContactForm7::onSubmit($this->form(), [ContactForm7::RESULT_STATUS => ContactForm7::STATUS_MAIL_SENT]);
 
-        $this->assertNull($this->identify(), 'no email → no identify call');
+        $conversion = $this->payloadFor('/conversions')['conversion'];
+        $this->assertSame('enquiry', $conversion['conversion_type']);
+        $this->assertSame('CUST-9', $conversion['user_id']);
+        $this->assertSame('Downtown Office', $conversion['properties']['location']); // from container post
+        $this->assertSame('jo@example.com', $this->payloadFor('/identify')['traits']['email']);
+    }
+
+    public function testDemoModeAlsoSucceeds(): void
+    {
+        $this->withMap();
+        $this->withPosted(['CustomerRef' => 'CUST-9']);
+
+        ContactForm7::onSubmit($this->form(), [ContactForm7::RESULT_STATUS => ContactForm7::STATUS_DEMO_MODE]);
+
         $this->assertNotNull($this->payloadFor('/conversions'));
-        $this->assertArrayNotHasKey('user_id', $this->conversion());
-    }
-
-    public function testUserIdFieldFilterOverridesDetection(): void
-    {
-        Functions\when('apply_filters')->alias(static function ($name, $value) {
-            return $name === 'mbuzz_cf7_user_id_field' ? 'GuardianEmail' : $value;
-        });
-        $this->withPosted([
-            'your-email'    => 'noisy@example.com',
-            'GuardianEmail' => 'guardian@example.com',
-        ]);
-
-        ContactForm7::onSubmit($this->form(), ['status' => 'mail_sent']);
-
-        $this->assertSame('guardian@example.com', $this->conversion()['user_id']);
-        $this->assertSame('guardian@example.com', $this->identify()['user_id']);
-    }
-
-    public function testIdentifyTraitsFilterCanOverride(): void
-    {
-        Functions\when('apply_filters')->alias(static function ($name, $value) {
-            if ($name === 'mbuzz_cf7_identify_traits') {
-                return ['email' => $value['email'], 'plan' => 'enquiry'];
-            }
-            return $value;
-        });
-        $this->withPosted(['your-email' => 'jane@example.com', 'your-phone' => '04000']);
-
-        ContactForm7::onSubmit($this->form(), ['status' => 'mail_sent']);
-
-        $traits = $this->identify()['traits'];
-        $this->assertSame('enquiry', $traits['plan']);
-        $this->assertArrayNotHasKey('phone', $traits);
-    }
-
-    public function testConversionTypeFilterCanRename(): void
-    {
-        Functions\when('apply_filters')->alias(static function ($name, $value) {
-            return $name === 'mbuzz_cf7_conversion_type' ? 'enquiry' : $value;
-        });
-        $this->withPosted(['your-email' => 'jane@example.com']);
-
-        ContactForm7::onSubmit($this->form(), ['status' => 'mail_sent']);
-
-        $this->assertSame('enquiry', $this->conversion()['conversion_type']);
-    }
-
-    public function testSkipFilterShortCircuits(): void
-    {
-        Functions\when('apply_filters')->alias(static function ($name, $value) {
-            return $name === 'mbuzz_cf7_skip_submission' ? true : $value;
-        });
-        $this->withPosted(['your-email' => 'jane@example.com']);
-
-        ContactForm7::onSubmit($this->form(), ['status' => 'mail_sent']);
-
-        $this->assertCount(0, $this->captured);
-    }
-
-    public function testHandlesMultiValueEmailField(): void
-    {
-        $this->withPosted(['your-email' => ['picked@example.com']]);
-
-        ContactForm7::onSubmit($this->form(), ['status' => 'mail_sent']);
-
-        $this->assertSame('picked@example.com', $this->conversion()['user_id']);
     }
 }
