@@ -23,7 +23,7 @@ if (! function_exists('mbuzz_event')) {
      */
     function mbuzz_event(string $type, array $properties = []): array|false
     {
-        if (! \Mbuzz\WP\Plugin::instance()->sdkReady()) {
+        if (! \Mbuzz\WP\Plugin::instance()->sdkReady() || ! \Mbuzz\WP\Privacy\Consent::granted()) {
             return false;
         }
         return \Mbuzz\Mbuzz::event($type, $properties);
@@ -40,7 +40,7 @@ if (! function_exists('mbuzz_conversion')) {
      */
     function mbuzz_conversion(string $type, array $options = []): array|false
     {
-        if (! \Mbuzz\WP\Plugin::instance()->sdkReady()) {
+        if (! \Mbuzz\WP\Plugin::instance()->sdkReady() || ! \Mbuzz\WP\Privacy\Consent::granted()) {
             return false;
         }
         return \Mbuzz\Mbuzz::conversion($type, $options);
@@ -56,7 +56,7 @@ if (! function_exists('mbuzz_identify')) {
      */
     function mbuzz_identify(string|int $userId, array $traits = []): bool
     {
-        if (! \Mbuzz\WP\Plugin::instance()->sdkReady()) {
+        if (! \Mbuzz\WP\Plugin::instance()->sdkReady() || ! \Mbuzz\WP\Privacy\Consent::granted()) {
             return false;
         }
         return \Mbuzz\Mbuzz::identify($userId, $traits);

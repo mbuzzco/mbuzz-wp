@@ -68,7 +68,8 @@ tests/Unit/        PHPUnit + Brain Monkey + Mockery
 
 - **Storage:** per-form config = the form's **post meta** (travels with the form, no orphans, never autoloaded). Cross-form settings = one option with **`autoload = false`** (WP 6.6 made the default `null`; set it explicitly).
 - **Menu:** top-level **Mbuzz** with `add_submenu_page` children (justified only because it's multi-screen; a single page would be a Settings submenu).
-- **Privacy:** the plugin ships PII to a third party → register a Privacy API exporter + eraser; gate on the **WP Consent API** (`wp_has_consent`) when present. Legal posture (APP 8 cross-border, Children's Online Privacy Code, GDPR) is the owner's call, not an engineering assumption.
+- **Privacy:** the plugin ships PII to a third party → `Privacy\PersonalData` registers a Privacy API exporter + eraser (the conduit stores almost nothing locally, so it discloses third-party processing + erases the one local record, `Identity\Hooks::META_LAST_IDENTIFIED_AT`). Legal posture (APP 8 cross-border, Children's Online Privacy Code, GDPR) is the owner's call, not an engineering assumption.
+- **Consent:** every capture entry point (each `Integrations\`/`Identity\` adapter, the front-end session path, the `mbuzz_*` theme helpers) MUST early-return on `Privacy\Consent::granted()` before sending anything. The pure `Tracking\` domain never references consent — gating lives in the adapter/controller layer. `Consent::granted()` honors the **WP Consent API** (`wp_has_consent`) when present (default category `marketing`), defaults to allowed when absent, and is filterable (`mbuzz_consent_category`, `mbuzz_has_consent`).
 
 ## i18n & accessibility
 

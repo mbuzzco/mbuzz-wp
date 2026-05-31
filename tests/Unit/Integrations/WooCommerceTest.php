@@ -45,6 +45,7 @@ class WooCommerceTest extends TestCase
         Functions\when('apply_filters')->alias(static function ($_name, $value) {
             return $value;
         });
+        Functions\when('wp_has_consent')->justReturn(true); // consent granted by default
         // Settings::current() reads get_option.
         Functions\when('get_option')->justReturn([]);
 

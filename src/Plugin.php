@@ -14,6 +14,8 @@ use Mbuzz\Mbuzz;
 use Mbuzz\WP\Identity\Hooks as IdentityHooks;
 use Mbuzz\WP\Integrations\ContactForm7;
 use Mbuzz\WP\Integrations\WooCommerce;
+use Mbuzz\WP\Privacy\Consent;
+use Mbuzz\WP\Privacy\PersonalData;
 use Mbuzz\WP\Settings\Cf7EditorPanel;
 use Mbuzz\WP\Settings\ConversionsPage;
 use Mbuzz\WP\Settings\Page as SettingsPage;
@@ -70,6 +72,9 @@ final class Plugin
 
         // CF7 per-form config panel (admin editor).
         add_action('plugins_loaded', [Cf7EditorPanel::class, 'register'], 10);
+
+        // Privacy: data exporter + eraser (we ship PII to a third party).
+        add_action('plugins_loaded', [PersonalData::class, 'register'], 10);
     }
 
     public function sdkReady(): bool
@@ -104,6 +109,9 @@ final class Plugin
         }
         if ($this->shouldSkipForAdmin()) {
             return;
+        }
+        if (! Consent::granted()) {
+            return; // no consent → no session, no visitor cookie
         }
 
         // Server-side-only deployments have no JS pixel to mint the visitor

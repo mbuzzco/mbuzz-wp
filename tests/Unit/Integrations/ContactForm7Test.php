@@ -32,6 +32,7 @@ class ContactForm7Test extends TestCase
 
         Functions\when('add_action')->justReturn(true);
         Functions\when('apply_filters')->alias(static fn ($_name, $value) => $value);
+        Functions\when('wp_has_consent')->justReturn(true); // consent granted by default
         Functions\when('get_post_meta')->justReturn(''); // no map by default
         Functions\when('get_the_title')->justReturn('Downtown Office');
         Functions\when('get_permalink')->justReturn('https://example.com/locations/downtown/');
@@ -112,6 +113,17 @@ class ContactForm7Test extends TestCase
         ContactForm7::onSubmit($this->form(), [ContactForm7::RESULT_STATUS => ContactForm7::STATUS_MAIL_SENT]);
 
         $this->assertCount(0, $this->captured);
+    }
+
+    public function testWithheldConsentFiresNothing(): void
+    {
+        Functions\when('wp_has_consent')->justReturn(false);
+        $this->withMap();
+        $this->withPosted(['CustomerRef' => 'CUST-9', 'CustomerEmail' => 'jo@example.com']);
+
+        ContactForm7::onSubmit($this->form(), [ContactForm7::RESULT_STATUS => ContactForm7::STATUS_MAIL_SENT]);
+
+        $this->assertCount(0, $this->captured, 'no consent → no tracking');
     }
 
     public function testConfiguredFormConvertsWithPageCapture(): void

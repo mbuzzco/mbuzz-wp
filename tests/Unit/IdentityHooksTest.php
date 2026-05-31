@@ -27,6 +27,9 @@ class IdentityHooksTest extends TestCase
         // Stub the WP functions Hooks reaches for.
         Functions\when('add_action')->justReturn(true);
         Functions\when('update_user_meta')->justReturn(true);
+        // Consent granted by default (the gate is exercised explicitly below).
+        Functions\when('apply_filters')->alias(static fn ($_name, $value) => $value);
+        Functions\when('wp_has_consent')->justReturn(true);
 
         Mbuzz::init(['api_key' => 'sk_test_identity']);
         Mbuzz::getClient()->setTransport(function ($method, $url, $payload) {
@@ -75,6 +78,20 @@ class IdentityHooksTest extends TestCase
         Hooks::onLogin('ghost', (object) []);
 
         $this->assertCount(0, $this->captured, 'no API call should fire for a user with no ID');
+    }
+
+    public function testWithheldConsentSkipsIdentify(): void
+    {
+        Functions\when('wp_has_consent')->justReturn(false);
+
+        Hooks::onLogin('jane', (object) [
+            'ID'           => 42,
+            'user_email'   => 'jane@example.com',
+            'display_name' => 'Jane Doe',
+            'roles'        => ['subscriber'],
+        ]);
+
+        $this->assertCount(0, $this->captured, 'no consent → no identify');
     }
 
     public function testOnLoginHandlesUserWithNoRole(): void

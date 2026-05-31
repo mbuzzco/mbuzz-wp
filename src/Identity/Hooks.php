@@ -11,9 +11,13 @@ declare(strict_types=1);
 namespace Mbuzz\WP\Identity;
 
 use Mbuzz\Mbuzz;
+use Mbuzz\WP\Privacy\Consent;
 
 final class Hooks
 {
+    /** User meta: unix time of the last identify() we sent for this user. */
+    public const META_LAST_IDENTIFIED_AT = '_mbuzz_last_identified_at';
+
     public static function register(): void
     {
         add_action('wp_login', [self::class, 'onLogin'], 10, 2);
@@ -28,11 +32,11 @@ final class Hooks
      */
     public static function onLogin(string $userLogin, $user): void
     {
-        if (! self::isValidUser($user)) {
+        if (! Consent::granted() || ! self::isValidUser($user)) {
             return;
         }
         Mbuzz::identify((int) $user->ID, self::traits($user));
-        update_user_meta((int) $user->ID, '_mbuzz_last_identified_at', time());
+        update_user_meta((int) $user->ID, self::META_LAST_IDENTIFIED_AT, time());
     }
 
     /**
@@ -40,13 +44,16 @@ final class Hooks
      */
     public static function onRegister(int $userId): void
     {
+        if (! Consent::granted()) {
+            return;
+        }
         $user = get_userdata($userId);
         if (! self::isValidUser($user)) {
             return;
         }
 
         Mbuzz::identify($userId, self::traits($user));
-        update_user_meta($userId, '_mbuzz_last_identified_at', time());
+        update_user_meta($userId, self::META_LAST_IDENTIFIED_AT, time());
 
         Mbuzz::conversion('signup', [
             'user_id'        => (string) $userId,
@@ -61,6 +68,9 @@ final class Hooks
      */
     public static function onProfileUpdate(int $userId, $oldUserData = null): void
     {
+        if (! Consent::granted()) {
+            return;
+        }
         $user = get_userdata($userId);
         if (! self::isValidUser($user)) {
             return;
@@ -78,7 +88,7 @@ final class Hooks
         }
 
         Mbuzz::identify($userId, self::traits($user));
-        update_user_meta($userId, '_mbuzz_last_identified_at', time());
+        update_user_meta($userId, self::META_LAST_IDENTIFIED_AT, time());
     }
 
     /**

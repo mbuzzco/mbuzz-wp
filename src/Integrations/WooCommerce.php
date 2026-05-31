@@ -14,6 +14,7 @@ declare(strict_types=1);
 namespace Mbuzz\WP\Integrations;
 
 use Mbuzz\Mbuzz;
+use Mbuzz\WP\Privacy\Consent;
 use Mbuzz\WP\Settings\Repository as SettingsRepository;
 
 final class WooCommerce
@@ -89,6 +90,9 @@ final class WooCommerce
 
     public static function onRefunded(int $orderId, int $refundId): void
     {
+        if (! Consent::granted()) {
+            return;
+        }
         $order  = self::resolveOrder($orderId);
         $refund = self::resolveOrder($refundId);
         if ($order === null || $refund === null) {
@@ -115,6 +119,9 @@ final class WooCommerce
 
     private static function trackPurchase(object $order): void
     {
+        if (! Consent::granted()) {
+            return;
+        }
         if (self::alreadyTracked($order)) {
             return;
         }

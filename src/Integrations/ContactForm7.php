@@ -13,6 +13,7 @@ declare(strict_types=1);
 
 namespace Mbuzz\WP\Integrations;
 
+use Mbuzz\WP\Privacy\Consent;
 use Mbuzz\WP\Tracking\FieldMap;
 use Mbuzz\WP\Tracking\TrackingEngine;
 
@@ -56,6 +57,9 @@ final class ContactForm7
     public static function onSubmit(object $contactForm, array $result): void
     {
         if (! in_array($result[self::RESULT_STATUS] ?? '', self::SUCCESS_STATUSES, true)) {
+            return;
+        }
+        if (! Consent::granted()) {
             return;
         }
 
