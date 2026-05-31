@@ -8,7 +8,7 @@ Ships to WP.org under the slug **`mbuzz-attribution`** (the user-facing plugin n
 
 ## Getting started
 
-mbuzz tracks the whole marketing journey **server-side** — every page view becomes a touchpoint, and form submissions and purchases become attributed conversions — with no JS pixel required. The transaction itself can even happen in another system (a CRM, billing, the billing system): as long as it later reports the conversion with the same email, mbuzz links it back to the marketing journey this plugin captured.
+mbuzz tracks the whole marketing journey **server-side** — every page view becomes a touchpoint, and form submissions and purchases become attributed conversions — with no JS pixel required. The transaction itself can even happen in another system (a CRM or billing system): as long as it later reports the conversion with the same email, mbuzz links it back to the marketing journey this plugin captured.
 
 ### Requirements
 
