@@ -51,7 +51,8 @@ class FieldMapTest extends TestCase
 
     public function testNeverSubstitutesEmailForUserId(): void
     {
-        // An email trait is present but NO field is roled user_id → no user_id.
+        // An email trait is present but NO field is roled user_id → no user_id,
+        // and with no join key there is nothing to identify.
         $hit = $this->map([
             'CustomerEmail' => [FieldMap::K_ROLE => Roles::TRAIT, FieldMap::K_KEY => 'email'],
         ])->resolve(['CustomerEmail' => 'jo@example.com']);
@@ -59,6 +60,18 @@ class FieldMapTest extends TestCase
         $this->assertNull($hit->userId);
         $this->assertSame('jo@example.com', $hit->traits['email']);
         $this->assertFalse($hit->hasIdentity());
+    }
+
+    public function testUserIdWithoutTraitsStillHasIdentity(): void
+    {
+        // A join key alone is enough to stitch — traits are optional enrichment.
+        $hit = $this->map([
+            'CustomerRef' => [FieldMap::K_ROLE => Roles::USER_ID],
+        ])->resolve(['CustomerRef' => 'CUST-7781']);
+
+        $this->assertSame('CUST-7781', $hit->userId);
+        $this->assertSame([], $hit->traits);
+        $this->assertTrue($hit->hasIdentity());
     }
 
     public function testPropertyKeepsArbitraryKeyAndArrays(): void

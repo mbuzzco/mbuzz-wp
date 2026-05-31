@@ -97,8 +97,8 @@ $track_as_labels = [
 										?>
 									</span>
 								<?php endif; ?>
-								<?php if ($row['tracked'] && $row['track_as'] === TrackAs::CONVERSION && ! $row['has_user_id']) : ?>
-									<br><span class="description" style="color:#996800"><?php esc_html_e('No user-ID field — relies on traits to match a person.', 'mbuzz-attribution'); ?></span>
+								<?php if ($row['tracked'] && ! $row['has_user_id']) : ?>
+									<br><span class="description" style="color:#996800"><?php esc_html_e('No user-ID field — identity isn\'t sent. Map a field as the user-ID join key to tie this to a person.', 'mbuzz-attribution'); ?></span>
 								<?php endif; ?>
 							<?php else : ?>
 								<span class="description"><?php esc_html_e('Not configured', 'mbuzz-attribution'); ?></span>

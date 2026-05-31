@@ -175,6 +175,22 @@ class TrackingEngineTest extends TestCase
         $this->assertNull($this->payloadFor('/conversions'));
     }
 
+    public function testUserIdAloneStillIdentifies(): void
+    {
+        // A join key with no traits must still identify — identifying links the
+        // user_id to the visitor/session; traits are optional enrichment.
+        $this->withMap($this->conversionMap([
+            'CustomerRef' => [FieldMap::K_ROLE => Roles::USER_ID],
+        ]));
+
+        TrackingEngine::handle($this->source(['CustomerRef' => 'CUST-9']));
+
+        $identify = $this->payloadFor('/identify');
+        $this->assertSame('CUST-9', $identify['user_id'], 'user_id alone → identify');
+        $this->assertSame([], $identify['traits'] ?? [], 'no traits sent, but identity stitched');
+        $this->assertNotNull($this->payloadFor('/conversions'));
+    }
+
     public function testNoUserIdSkipsIdentifyButConverts(): void
     {
         $this->withMap($this->conversionMap([

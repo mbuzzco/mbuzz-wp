@@ -28,9 +28,15 @@ final class ResolvedHit
     ) {
     }
 
-    /** Whether there is anyone to identify (a join key plus at least one trait). */
+    /**
+     * Whether there is anyone to identify. Identifying links the unique user
+     * attribute (user_id) to the current visitor/session — which the SDK always
+     * carries — collapsing this and prior anonymous sessions onto the person.
+     * Traits are optional enrichment on that link, never a precondition: a
+     * join key alone is enough to stitch.
+     */
     public function hasIdentity(): bool
     {
-        return $this->userId !== null && $this->userId !== '' && $this->traits !== [];
+        return $this->userId !== null && $this->userId !== '';
     }
 }
