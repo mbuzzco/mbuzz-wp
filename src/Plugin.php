@@ -15,6 +15,7 @@ use Mbuzz\WP\Identity\Hooks as IdentityHooks;
 use Mbuzz\WP\Integrations\ContactForm7;
 use Mbuzz\WP\Integrations\WooCommerce;
 use Mbuzz\WP\Settings\Cf7EditorPanel;
+use Mbuzz\WP\Settings\ConversionsPage;
 use Mbuzz\WP\Settings\Page as SettingsPage;
 use Mbuzz\WP\Settings\Repository as SettingsRepository;
 use Mbuzz\WP\Visitor\CookieBootstrap;
@@ -57,9 +58,9 @@ final class Plugin
         // Multisite: re-init SDK with the destination site's settings.
         add_action('switch_blog', [$this, 'onSwitchBlog'], 10, 2);
 
-        // Admin: settings page + sanitization.
+        // Admin: Mbuzz menu (Conversions overview + Settings) + sanitization.
         add_action('admin_init', [SettingsPage::class, 'registerSettings']);
-        add_action('admin_menu', [SettingsPage::class, 'registerMenu']);
+        add_action('admin_menu', [ConversionsPage::class, 'registerMenu']);
 
         // Identity + integrations register their own hooks on plugins_loaded
         // — after the SDK is booted so they can safely call Mbuzz::*.
