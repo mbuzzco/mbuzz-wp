@@ -46,6 +46,7 @@ class ContactForm7Test extends TestCase
     protected function tearDown(): void
     {
         ContactForm7::setPostedDataProviderForTests(null);
+        ContactForm7::setPageProviderForTests(null);
         Mbuzz::reset();
         Mockery::close();
         Monkey\tearDown();
@@ -116,18 +117,16 @@ class ContactForm7Test extends TestCase
     public function testConfiguredFormConvertsWithPageCapture(): void
     {
         $this->withMap();
-        $this->withPosted([
-            'CustomerRef'                       => 'CUST-9',
-            'CustomerEmail'                       => 'jo@example.com',
-            ContactForm7::FIELD_CONTAINER_POST  => '12',
-        ]);
+        $this->withPosted(['CustomerRef' => 'CUST-9', 'CustomerEmail' => 'jo@example.com']);
+        // The page comes from the CF7 submission meta, not the posted data.
+        ContactForm7::setPageProviderForTests(static fn () => [FieldMap::PAGE_TITLE => 'Downtown Office']);
 
         ContactForm7::onSubmit($this->form(), [ContactForm7::RESULT_STATUS => ContactForm7::STATUS_MAIL_SENT]);
 
         $conversion = $this->payloadFor('/conversions')['conversion'];
         $this->assertSame('enquiry', $conversion['conversion_type']);
         $this->assertSame('CUST-9', $conversion['user_id']);
-        $this->assertSame('Downtown Office', $conversion['properties']['location']); // from container post
+        $this->assertSame('Downtown Office', $conversion['properties']['location']);
         $this->assertSame('jo@example.com', $this->payloadFor('/identify')['traits']['email']);
     }
 

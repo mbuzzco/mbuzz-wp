@@ -3,8 +3,8 @@
  * Contact Form 7 runtime adapter. Hooks `wpcf7_submit`, and on a successful
  * submission hands a Cf7FormSource to the TrackingEngine. All mapping logic
  * lives in the engine + the form's saved map — this class only reads CF7's
- * submission and resolves the submitting page. Tracking is opt-in: a form with
- * no saved map fires nothing.
+ * submission (posted data + the submitting page from the submission meta).
+ * Tracking is opt-in: a form with no saved map fires nothing.
  *
  * @package Mbuzz\WP\Integrations
  */
@@ -18,16 +18,21 @@ use Mbuzz\WP\Tracking\TrackingEngine;
 
 final class ContactForm7
 {
-    public const RESULT_STATUS      = 'status';
-    public const STATUS_MAIL_SENT   = 'mail_sent';
-    public const STATUS_DEMO_MODE   = 'demo_mode';
-    public const FIELD_CONTAINER_POST = '_wpcf7_container_post';
+    public const RESULT_STATUS    = 'status';
+    public const STATUS_MAIL_SENT = 'mail_sent';
+    public const STATUS_DEMO_MODE = 'demo_mode';
+
+    private const META_CONTAINER_POST = 'container_post_id';
+    private const META_URL            = 'url';
 
     /** Statuses that represent a real, completed submission. */
     public const SUCCESS_STATUSES = [self::STATUS_MAIL_SENT, self::STATUS_DEMO_MODE];
 
-    /** Test seam for posted data (WPCF7_Submission doesn't exist in unit tests). */
+    /** @var callable|null test seam: posted data */
     private static $postedDataProvider = null;
+
+    /** @var callable|null test seam: page descriptor */
+    private static $pageProvider = null;
 
     public static function register(): void
     {
@@ -54,26 +59,39 @@ final class ContactForm7
             return;
         }
 
-        $posted = self::postedData();
-        TrackingEngine::handle(new Cf7FormSource($contactForm, $posted, self::page($posted)));
+        TrackingEngine::handle(new Cf7FormSource($contactForm, self::postedData(), self::page()));
     }
 
     /**
-     * @param array<string, mixed> $posted
+     * The submitting page, read from the CF7 submission meta (the container post
+     * id and url are not part of get_posted_data()).
+     *
      * @return array<string, mixed>
      */
-    private static function page(array $posted): array
+    private static function page(): array
     {
-        $id = (int) ($posted[self::FIELD_CONTAINER_POST] ?? 0);
-        if ($id <= 0) {
+        if (self::$pageProvider !== null) {
+            $page = (self::$pageProvider)();
+            return is_array($page) ? $page : [];
+        }
+
+        $submission = self::submission();
+        if ($submission === null) {
             return [];
         }
 
-        return [
-            FieldMap::PAGE_ID    => $id,
-            FieldMap::PAGE_TITLE => (string) get_the_title($id),
-            FieldMap::PAGE_URL   => (string) get_permalink($id),
-        ];
+        $page = [];
+        $id   = (int) $submission->get_meta(self::META_CONTAINER_POST);
+        $url  = (string) $submission->get_meta(self::META_URL);
+        if ($id > 0) {
+            $page[FieldMap::PAGE_ID]    = $id;
+            $page[FieldMap::PAGE_TITLE] = (string) get_the_title($id);
+        }
+        if ($url !== '') {
+            $page[FieldMap::PAGE_URL] = $url;
+        }
+
+        return $page;
     }
 
     /**
@@ -86,21 +104,29 @@ final class ContactForm7
             return is_array($data) ? $data : [];
         }
 
-        if (! class_exists('WPCF7_Submission')) {
-            return [];
-        }
-
-        $submission = \WPCF7_Submission::get_instance();
+        $submission = self::submission();
         $data = $submission !== null ? $submission->get_posted_data() : [];
 
         return is_array($data) ? $data : [];
     }
 
-    /**
-     * For tests — inject canned posted data in place of WPCF7_Submission.
-     */
+    private static function submission(): ?object
+    {
+        if (! class_exists('WPCF7_Submission')) {
+            return null;
+        }
+        $submission = \WPCF7_Submission::get_instance();
+
+        return is_object($submission) ? $submission : null;
+    }
+
     public static function setPostedDataProviderForTests(?callable $provider): void
     {
         self::$postedDataProvider = $provider;
+    }
+
+    public static function setPageProviderForTests(?callable $provider): void
+    {
+        self::$pageProvider = $provider;
     }
 }

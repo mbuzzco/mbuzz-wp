@@ -14,6 +14,7 @@ use Mbuzz\Mbuzz;
 use Mbuzz\WP\Identity\Hooks as IdentityHooks;
 use Mbuzz\WP\Integrations\ContactForm7;
 use Mbuzz\WP\Integrations\WooCommerce;
+use Mbuzz\WP\Settings\Cf7EditorPanel;
 use Mbuzz\WP\Settings\Page as SettingsPage;
 use Mbuzz\WP\Settings\Repository as SettingsRepository;
 use Mbuzz\WP\Visitor\CookieBootstrap;
@@ -65,6 +66,9 @@ final class Plugin
         add_action('plugins_loaded', [IdentityHooks::class, 'register'], 10);
         add_action('plugins_loaded', [WooCommerce::class, 'register'], 10);
         add_action('plugins_loaded', [ContactForm7::class, 'register'], 10);
+
+        // CF7 per-form config panel (admin editor).
+        add_action('plugins_loaded', [Cf7EditorPanel::class, 'register'], 10);
     }
 
     public function sdkReady(): bool
