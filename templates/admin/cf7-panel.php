@@ -16,6 +16,7 @@
  * @var string                            $capture_page_as_name
  * @var array<int, string>                $role_options
  * @var array<int, array<string, string>> $rows
+ * @var string                            $docs_url
  */
 
 declare(strict_types=1);
@@ -45,7 +46,20 @@ $role_labels = [
 ?>
 <h2><?php esc_html_e('Mbuzz attribution', 'mbuzz-attribution'); ?></h2>
 <p class="description">
-	<?php esc_html_e('Track this form in mbuzz. Tracking stays off until you enable it here. The "Identity — user ID" field is the join key that ties this lead to the rest of the journey — a non-PII unique ID is preferred; mapping email or phone sends that data to mbuzz.', 'mbuzz-attribution'); ?>
+	<?php esc_html_e('Choose how this form is sent to mbuzz. Tracking stays off until you enable it here — nothing fires on forms you don\'t configure. Set whether the submission is a conversion or an event, name it, and map each field below.', 'mbuzz-attribution'); ?>
+</p>
+<p class="description">
+	<?php
+	printf(
+		/* translators: 1: Identity user ID role, 2: Identity trait role, 3: Property role, 4: Ignore role */
+		esc_html__('Per field, pick a role: %1$s is the join key that ties this lead to the rest of the journey and to conversions your other systems report later — a non-PII unique ID is best; email or phone send that data to mbuzz. %2$s describes the person (you name it). %3$s attaches anything else to the conversion. %4$s never sends it.', 'mbuzz-attribution'),
+		'<strong>' . esc_html__('Identity — user ID', 'mbuzz-attribution') . '</strong>',
+		'<strong>' . esc_html__('Identity trait', 'mbuzz-attribution') . '</strong>',
+		'<strong>' . esc_html__('Property', 'mbuzz-attribution') . '</strong>',
+		'<strong>' . esc_html__('Ignore', 'mbuzz-attribution') . '</strong>'
+	);
+	?>
+	<a href="<?php echo esc_url($docs_url); ?>" target="_blank" rel="noopener"><?php esc_html_e('Read the documentation →', 'mbuzz-attribution'); ?></a>
 </p>
 
 <table class="form-table" role="presentation">

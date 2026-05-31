@@ -11,6 +11,7 @@ declare(strict_types=1);
 
 namespace Mbuzz\WP\Settings;
 
+use Mbuzz\WP\Support\Links;
 use Mbuzz\WP\Tracking\FieldMap;
 use Mbuzz\WP\Tracking\Roles;
 use Mbuzz\WP\Tracking\TrackAs;
@@ -39,6 +40,7 @@ final class Cf7PanelPresenter
             'capture_page_as_name' => $this->name([FieldMap::K_CAPTURE_PAGE_AS]),
             'role_options'         => Roles::ALL,
             'rows'                 => $this->rows($map, $fieldNames),
+            'docs_url'             => Links::DOCS,
         ];
     }
 
