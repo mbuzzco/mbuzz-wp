@@ -12,7 +12,7 @@
 
 Give a WordPress admin a no-code way to **set up how their forms map to mbuzz** — which forms are tracked, whether each is a conversion or an event, what the conversion is called, and **how every form field maps to mbuzz's vocabulary** (identity traits, the cross-system `user_id`, revenue, or named properties), plus capturing the **page as a location**. Today the plugin only accepts an API key and then *hardcodes* "any Contact Form 7 submit → a `lead` conversion, passing every field through verbatim." That is invisible, uncontrollable, fires on forms the admin never intended, and — on a site that collects family data — silently ships children's names and DOBs to mbuzz. This spec replaces that auto-magic with an **explicit, admin-configured, opt-in mapping** that is the single source of truth applied at submit time.
 
-Non-technical framing: *"After I paste my API key, I open Mbuzz → Conversions, I see my forms, and for each one I say 'this is an Enquiry Enquiry, this field is the email, capture the location, call this field team_size' — and that's the whole setup."*
+Non-technical framing: *"After I paste my API key, I open Mbuzz → Conversions, I see my forms, and for each one I say 'this is an enquiry, this field is the email, capture the location, call this field team_size' — and that's the whole setup."*
 
 ---
 
@@ -205,7 +205,7 @@ Transport-capture seam (`Mbuzz::getClient()->setTransport`) asserts the actual `
 
 1. Install zip, set key, open **Mbuzz → Conversions**: downtown form 7 listed, suggested map pre-filled (email/first/last/phone identity, children ignored).
 2. Set type `enquiry`, `capture_page_as=location`, save.
-3. Submit form (CUST-shaped fields) in wp-env → assert in debug.log: `identify` (canonical traits, no child data) + `conversion('enquiry')` with `location`, `team_size`, **no** `Child1*`.
+3. Submit form (Acme-shaped fields) in wp-env → assert in debug.log: `identify` (canonical traits, no child data) + `conversion('enquiry')` with `location`, `team_size`, **no** `Child1*`.
 4. A second, unmapped CF7 form → submit → **nothing** fires.
 
 ---
