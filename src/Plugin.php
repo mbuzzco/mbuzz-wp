@@ -79,7 +79,7 @@ final class Plugin
 
         // Embedded / external form capture: first-party REST endpoint + JS helper.
         LeadController::register();
-        add_action('wp_enqueue_scripts', [self::class, 'enqueueCaptureHelper']);
+        add_action('wp_enqueue_scripts', [$this, 'enqueueCaptureHelper']);
     }
 
     /**
