@@ -16,6 +16,7 @@ use Mbuzz\WP\Integrations\ContactForm7;
 use Mbuzz\WP\Integrations\WooCommerce;
 use Mbuzz\WP\Privacy\Consent;
 use Mbuzz\WP\Privacy\PersonalData;
+use Mbuzz\WP\Rest\LeadController;
 use Mbuzz\WP\Settings\Cf7EditorPanel;
 use Mbuzz\WP\Settings\ConversionsPage;
 use Mbuzz\WP\Settings\Page as SettingsPage;
@@ -75,6 +76,32 @@ final class Plugin
 
         // Privacy: data exporter + eraser (we ship PII to a third party).
         add_action('plugins_loaded', [PersonalData::class, 'register'], 10);
+
+        // Embedded / external form capture: first-party REST endpoint + JS helper.
+        LeadController::register();
+        add_action('wp_enqueue_scripts', [self::class, 'enqueueCaptureHelper']);
+    }
+
+    /**
+     * Enqueue the front-end capture helper (window.mbuzz.captureLead). Skipped
+     * for excluded admins so the helper isn't loaded where tracking is off.
+     */
+    public function enqueueCaptureHelper(): void
+    {
+        if (! $this->sdkReady() || $this->shouldSkipForAdmin()) {
+            return;
+        }
+
+        wp_enqueue_script(
+            'mbuzz-capture',
+            MBUZZ_ATTRIBUTION_URL . 'assets/js/mbuzz-capture.js',
+            [],
+            MBUZZ_ATTRIBUTION_VERSION,
+            true
+        );
+        wp_localize_script('mbuzz-capture', 'mbuzzCapture', [
+            'endpoint' => esc_url_raw(rest_url(LeadController::NAMESPACE . LeadController::ROUTE)),
+        ]);
     }
 
     public function sdkReady(): bool
