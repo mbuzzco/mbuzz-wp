@@ -9,6 +9,7 @@
 - **The plugin is a schema-agnostic conduit.** It never dictates what a customer sends. Traits/properties are arbitrary admin-named keys; `user_id` is admin-designated (a non-PII unique id is preferred); never auto-default `user_id` to an email. See `lib/specs/form-mapping-and-tracking-config-spec.md`.
 - **Tracking is opt-in.** A form with no saved, enabled map fires nothing. Never capture PII (esp. children's data) without an explicit per-form mapping.
 - **TDD.** Spec → RED test → GREEN code → refactor. Domain logic is pure and unit-tested; WP is mocked (Brain Monkey).
+- **NEVER ship to a production site without a wp-env front-end smoke test first.** Green unit tests ≠ "boots in WordPress." Unit tests stub `add_action`, so hook-wiring / activation / enqueue fatals are invisible to them. Before building any zip for a live site, the plugin MUST be activated in wp-env and a **logged-out front-end page loaded with an API key set** (the `sdkReady` path) returning HTTP 200 with no "critical error". See the **Pre-ship gate** in Testing. (This rule exists because skipping it 500'd a live site: an instance method registered as a `[self::class, …]` static hook callback — green units, dead front end.)
 - **No secrets in git.** No API keys/tokens. `.wp-env.override.json` (gitignored) holds local keys.
 - **No AI attribution in commits.** Conventional commits, matching the other mbuzz repos.
 
@@ -85,6 +86,23 @@ tests/Unit/        PHPUnit + Brain Monkey + Mockery
 - PHPUnit 10 + **Brain Monkey** (WP function mocks) + **Mockery**. `composer test:unit`.
 - **Pure domain** (`Tracking\`, presenters, sanitizers) is unit-tested directly. **SDK calls** are asserted via the transport-capture seam (`Mbuzz::getClient()->setTransport(...)`). Templates/rendering are verified in `wp-env`, not unit tests.
 - `failOnRisky` is on — a Mockery-only test needs `$this->addToAssertionCount(1)`.
+- **Hook-wiring guard.** `PluginHookWiringTest` captures every callback `Plugin::register()` wires and asserts each is `is_callable` (and that `[class, method]` callbacks declared static really are static). This is the unit-level backstop for the static-vs-instance hook bug; keep it green when adding hooks.
+
+### Pre-ship gate (MANDATORY before any production upload)
+
+Unit tests verify units in isolation; they cannot verify the plugin **boots inside WordPress** (they stub `add_action`). The gap between "tests pass" and "safe in production" for a WP plugin is exactly boot/activation/hook-wiring/enqueue — only a real WP load exercises it. So, in order, every time before zipping for a live site:
+
+1. `composer test:unit` — green (incl. `PluginHookWiringTest`).
+2. **wp-env front-end smoke** — the step that catches what units can't:
+   - `npx @wordpress/env run cli wp plugin list` → confirm `mbuzz-wp` is **active**.
+   - Set a test key so the `sdkReady` enqueue path runs:
+     `npx @wordpress/env run cli wp eval '$o=get_option("mbuzz_attribution_settings"); $o=is_array($o)?$o:[]; $o["api_key"]="sk_test_smoke"; update_option("mbuzz_attribution_settings",$o);'`
+   - Load a **logged-out** front-end page and assert no fatal:
+     `curl -s -o /tmp/smoke.html -w "%{http_code}\n" "http://localhost:8888/?nocache=$(date +%s)"` → must be **200**, and `grep -c "critical error" /tmp/smoke.html` → must be **0**.
+   - Reset the test key afterward.
+3. Only then build the zip.
+
+Deploy ordering on the live site: **replace + activate, confirm the front end renders, THEN purge cache.** Purging before confirming only exposes already-broken code to visitors (a cache purge is how the 500 above surfaced).
 
 ## Distribution
 
