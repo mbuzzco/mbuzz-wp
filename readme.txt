@@ -4,7 +4,7 @@ Tags: attribution, analytics, woocommerce, marketing, conversion-tracking
 Requires at least: 6.5
 Tested up to: 6.7
 Requires PHP: 8.1
-Stable tag: 0.2.0-alpha
+Stable tag: 0.3.0-alpha
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -53,6 +53,10 @@ Reporting lives at app.mbuzz.co. This plugin handles capture and configuration
 only.
 
 == Changelog ==
+
+= 0.3.0-alpha =
+* Embedded / external form capture: a first-party endpoint and a small JavaScript helper (window.mbuzz.captureLead) let you report a lead from forms that submit in the browser to a third party (e.g. a booking widget) and never reach WordPress. The visitor is resolved server-side, so attribution still works with no JavaScript access to the visitor cookie.
+* Clearer Contact Form 7 mapping panel: the "mbuzz name" field is now hidden for roles that don't use one (user ID, revenue, currency, ignore).
 
 = 0.2.0-alpha =
 * Opt-in per-form field mapping for Contact Form 7: set each field's role (user ID, identity trait, property, revenue, currency, or ignore) and whether the form records a conversion or an event. Replaces the previous auto-fire behaviour — tracking now stays off until a form is configured.
