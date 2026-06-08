@@ -43,6 +43,7 @@ class Cf7PanelPresenterTest extends TestCase
         $this->assertSame('mbuzz_map[type]', $vm['type_name']);
         $this->assertSame(TrackAs::ALL, $vm['track_as_options']);
         $this->assertSame(Roles::ALL, $vm['role_options']);
+        $this->assertSame(Roles::KEYED, $vm['keyed_roles']);
     }
 
     public function testRowsCarryInputNamesAndCurrentValues(): void
@@ -64,11 +65,27 @@ class Cf7PanelPresenterTest extends TestCase
         $this->assertSame('mbuzz_map[fields][CustomerEmail][role]', $email['role_name']);
         $this->assertSame('mbuzz_map[fields][CustomerEmail][key]', $email['key_name']);
         $this->assertSame('mbuzz-role-0', $email['role_id']);
+        $this->assertTrue($email['key_used']); // trait carries a mbuzz name
 
         // Unmapped field defaults to ignore with no key.
         $this->assertSame('Postcode', $postcode['field']);
         $this->assertSame(Roles::IGNORE, $postcode['role']);
         $this->assertSame('', $postcode['key']);
         $this->assertSame('mbuzz-role-1', $postcode['role_id']);
+        $this->assertFalse($postcode['key_used']); // ignore takes no name
+    }
+
+    public function testUserIdRoleTakesNoKey(): void
+    {
+        $vm = $this->present(
+            $this->map([
+                'CustomerRef' => [FieldMap::K_ROLE => Roles::USER_ID],
+            ]),
+            ['CustomerRef']
+        );
+
+        [$row] = $vm['rows'];
+        $this->assertSame(Roles::USER_ID, $row['role']);
+        $this->assertFalse($row['key_used']); // user_id is the key — no mbuzz name
     }
 }

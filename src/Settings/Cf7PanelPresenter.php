@@ -39,6 +39,7 @@ final class Cf7PanelPresenter
             'capture_page_as'      => (string) $map->capturePageAs,
             'capture_page_as_name' => $this->name([FieldMap::K_CAPTURE_PAGE_AS]),
             'role_options'         => Roles::ALL,
+            'keyed_roles'          => Roles::KEYED,
             'rows'                 => $this->rows($map, $fieldNames),
             'docs_url'             => Links::DOCS,
         ];
@@ -53,14 +54,18 @@ final class Cf7PanelPresenter
         $rows = [];
         foreach (array_values($fieldNames) as $index => $field) {
             $config = $map->fields[$field] ?? [FieldMap::K_ROLE => Roles::IGNORE];
+            $role   = (string) ($config[FieldMap::K_ROLE] ?? Roles::IGNORE);
             $rows[] = [
                 'field'     => $field,
-                'role'      => (string) ($config[FieldMap::K_ROLE] ?? Roles::IGNORE),
+                'role'      => $role,
                 'role_name' => $this->name([FieldMap::K_FIELDS, $field, FieldMap::K_ROLE]),
                 'role_id'   => 'mbuzz-role-' . $index,
                 'key'       => (string) ($config[FieldMap::K_KEY] ?? ''),
                 'key_name'  => $this->name([FieldMap::K_FIELDS, $field, FieldMap::K_KEY]),
                 'key_id'    => 'mbuzz-key-' . $index,
+                // Only trait/property carry a mbuzz name; user_id/revenue/currency/ignore
+                // don't — the template hides the name input for those.
+                'key_used'  => in_array($role, Roles::KEYED, true),
             ];
         }
 
