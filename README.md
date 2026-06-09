@@ -4,7 +4,7 @@ WordPress plugin for the [Mbuzz](https://mbuzz.co) multi-touch attribution platf
 
 Ships to WP.org under the slug **`mbuzz-attribution`** (the user-facing plugin name) — `mbuzz-wp` is just the repo name, matching the `mbuzz-php` / `mbuzz-ruby` SDK repos.
 
-**Status: 0.1.0-alpha.** Server-side sessions, Contact Form 7 leads, identity stitching, and WooCommerce conversions are wired and verified end-to-end. The settings UI, the remaining form-plugin integrations, and WP.org packaging are in progress. Full design + roadmap: `lib/specs/wordpress-plugin.md` (in the SDK repo) and the checklist below.
+**Status: 0.3.0-alpha.** Server-side sessions, opt-in Contact Form 7 field mapping, embedded/third-party form capture (a first-party REST endpoint + JS helper), identity stitching, WooCommerce conversions, WP Consent API gating, and the Privacy API exporter/eraser are wired and verified end-to-end. The remaining form-plugin adapters, php-scoper build, and WP.org packaging are in progress. Full design lives in `lib/specs/`.
 
 ## Getting started
 
@@ -35,23 +35,39 @@ Start with an `sk_test_*` key and confirm everything flows into the **Test** vie
 | What | How |
 |---|---|
 | **Page touchpoints** | Every front-end page view creates a server-side session (channel, referrer, UTM). Logged-in admins are excluded by default. |
-| **Form leads** | Contact Form 7 submissions fire a `lead` conversion — the email is captured, the submitter is stitched to an identity, and every form field is attached to the conversion. |
+| **Contact Form 7 leads** | **Opt-in, per-form.** Open a form's **Mbuzz** tab and map each field (user ID / identity trait / property / revenue / currency / ignore) and whether the form records a conversion or an event. Nothing fires until a form is configured — sensitive fields (children, DOBs) default to *ignore*. |
+| **Embedded / third-party forms** | Forms that submit in the browser to another system (a CRM or scheduling widget) and never reach WordPress. A small JS helper, `window.mbuzz.captureLead(...)`, POSTs the lead to a first-party endpoint that resolves the visitor server-side — see **Custom tracking** below. |
 | **Identity** | WordPress logins and registrations link the visitor to a known user. |
 | **WooCommerce** | Purchases, refunds, and first-order acquisition (when WooCommerce is active). |
 
 ### 4. Verify
 
-Submit one of your forms, then open your mbuzz dashboard (the **Test** view if you used an `sk_test_*` key) — you should see the new session and the `lead` conversion. Add `define('MBUZZ_DEBUG', true);` to log every API call to `wp-content/debug.log` while testing.
+Submit one of your configured forms (logged out, so you aren't excluded as an admin), then open your mbuzz dashboard (the **Test** view if you used an `sk_test_*` key) — you should see the new session, an `identify`, and the form's event/conversion. Add `define('MBUZZ_DEBUG', true);` to log every API call to `wp-content/debug.log` while testing.
 
 ### Custom tracking (themes & snippets)
 
-Three procedural helpers are available anywhere in your theme or a snippet plugin:
+Three procedural helpers are available anywhere in your theme or a snippet plugin (server-side PHP):
 
 ```php
 mbuzz_event('brochure_download', ['guide' => 'fees-2026']);
 mbuzz_conversion('enquiry', ['user_id' => $email]);
 mbuzz_identify($email, ['first_name' => $first, 'phone' => $phone]);
 ```
+
+### Capturing an embedded / third-party form (client-side)
+
+Some forms render and submit entirely in the browser to another company's domain (a CRM or scheduling widget) and never reach WordPress, so the server-side hooks above can't see them. For those, call the JS helper on the form's **success** callback. It POSTs to a first-party endpoint (`/wp-json/mbuzz/v1/lead`) that resolves the visitor from the (HttpOnly) `_mbuzz_vid` cookie server-side and fires `identify` + the event — so the lead still attributes to the visitor's journey, with no JavaScript access to the cookie:
+
+```js
+window.mbuzz.captureLead({
+  type: 'lead',                         // event name (sanitized slug); defaults to 'lead'
+  user_id: emailFromTheForm,            // the cross-system join key (a non-PII ID is preferred)
+  traits: { phone: phoneFromForm, first_name: firstFromForm },
+  properties: { plan: 'starter', external_lead_id: vendorLeadId }
+});
+```
+
+Notes: call it only on genuine success (not on every attempt); the plugin captures only what you pass (it never scrapes field values); the endpoint accepts same-origin requests only; and `window.mbuzz` is provided by the plugin's front-end helper (loaded when an API key is set).
 
 ## Repo layout
 
@@ -61,19 +77,20 @@ mbuzz-attribution/
 ├── composer.json               # Pulls mbuzz/mbuzz-php ^1.2
 ├── readme.txt                  # WP.org format
 ├── uninstall.php               # Option + transient cleanup
+├── assets/js/mbuzz-capture.js  # window.mbuzz.captureLead — embedded-form helper
 ├── src/
 │   ├── helpers.php             # mbuzz_event/conversion/identify — scope-stable theme surface
 │   ├── Plugin.php              # Singleton, hook registration, switch_blog handling
 │   ├── Bootstrap.php           # boot(settings): Mbuzz::init + onSuccess/onError wiring
-│   ├── Settings/
-│   │   ├── Page.php            # Settings → Mbuzz screen (stub)
-│   │   ├── Fields.php          # Sanitization (stub)
-│   │   └── Repository.php      # Single-option storage + wp-config.php overrides
-│   ├── Identity/               # (planned) wp_login, user_register, profile_update hooks
-│   ├── Integrations/           # (planned) WooCommerce, EDD, CF7, Gravity, WPForms, ...
-│   ├── Cli/                    # (planned) WP-CLI commands
-│   ├── Privacy/                # (planned) Consent API + exporters/erasers
-│   └── Block/                  # (planned) Tracked Button Gutenberg block
+│   ├── Tracking/               # Domain engine: FieldMap, ResolvedHit, AutoDetector, TrackingEngine
+│   ├── Integrations/           # FormSource + Cf7FormSource/ContactForm7, WooCommerce
+│   ├── Settings/               # Admin: Page, ConversionsPage, Cf7EditorPanel + presenters/sanitizers
+│   ├── Rest/                   # LeadController + LeadRequest (first-party embed endpoint)
+│   ├── Identity/               # wp_login, user_register, profile_update hooks
+│   ├── Privacy/                # Consent (WP Consent API) + PersonalData (exporter/eraser)
+│   ├── Visitor/                # CookieBootstrap — mints _mbuzz_vid server-side
+│   └── Support/                # View (template loader), Links
+├── templates/admin/            # Escaped-output views (CF7 panel, conversions overview)
 └── tests/Unit/                 # PHPUnit + Brain Monkey
 ```
 
@@ -115,7 +132,7 @@ Verify a lead end-to-end:
 
 ## Configuration
 
-Settings UI is stubbed. For now, configure via `wp-config.php`:
+Configure in **Mbuzz → Settings** (API key + toggles). Managed hosts / multisite can override via `wp-config.php` constants instead, which the settings screen then shows as locked:
 
 ```php
 define('MBUZZ_API_KEY', 'sk_live_…');
@@ -125,7 +142,7 @@ define('MBUZZ_DEBUG', false);
 
 ## What's left
 
-Roadmap follows `lib/specs/wordpress-plugin.md` in the SDK repo:
+Shipped and planned (design specs live in `lib/specs/`):
 
 - [x] Plugin bootstrap, autoload, PHP-floor guard (§2, §3)
 - [x] Settings storage + wp-config.php overrides (§4)
@@ -136,14 +153,16 @@ Roadmap follows `lib/specs/wordpress-plugin.md` in the SDK repo:
 - [x] WooCommerce: thankyou + processing + completed dedupe, refunds, first-paid detection, HPOS-safe meta, cookieless guest attribution via billing email (§6)
 - [x] Server-side visitor bootstrap: plugin mints `_mbuzz_vid` on `template_redirect` so sessions/touchpoints record without a JS pixel (the SDK never mints it itself)
 - [x] `track_admins` gate honored in the request path — logged-in admins bypass tracking by default (§4)
-- [x] Contact Form 7: `wpcf7_submit` → `lead` conversion, auto-detected email → `user_id`, form id/title in properties, filter overrides (§7)
+- [x] Contact Form 7: opt-in per-form field mapping in the form editor's Mbuzz tab (role per field; conversion or event); replaces the old auto-fire (§7)
 - [x] Settings page UI: API key field, enable/track-admins/debug toggles, diagnostics card — key settable in wp-admin, no wp-config edit needed (§4)
+- [x] Conversions overview screen + Mbuzz menu hub
+- [x] WP Consent API gating across every capture surface (§11)
+- [x] Privacy API exporter + eraser (§11)
+- [x] Embedded / external form capture: first-party REST endpoint (`/wp-json/mbuzz/v1/lead`) + `window.mbuzz.captureLead()` JS helper
 - [ ] WooCommerce Subscriptions renewal hook (§6 — deferred, paid extension)
 - [ ] Other plugin integrations: EDD, Gravity, WPForms, Fluent, MemberPress, LearnDash (§7)
 - [ ] Tracked Button Gutenberg block (§8)
 - [ ] WP-CLI commands: status, test, flush, identify, conversion (§9)
-- [ ] WP Consent API gating (§11)
-- [ ] Privacy exporter + eraser (§11)
 - [ ] php-scoper build pipeline (§2)
 - [ ] WP.org submission (§14)
 

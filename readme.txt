@@ -13,8 +13,9 @@ Server-side multi-touch attribution for WordPress and WooCommerce.
 == Description ==
 
 Mbuzz Attribution wires WordPress and WooCommerce to the Mbuzz attribution
-platform. Conversions, sessions, and identity events flow server-side —
-no extra JavaScript on your pages beyond the existing pixel.
+platform. Conversions, sessions, and identity events flow server-side — no
+JavaScript pixel required. (One small optional helper script loads only if you
+choose to capture embedded/third-party forms; see the changelog.)
 
 = Highlights =
 
@@ -55,7 +56,7 @@ only.
 == Changelog ==
 
 = 0.3.0-alpha =
-* Embedded / external form capture: a first-party endpoint and a small JavaScript helper (window.mbuzz.captureLead) let you report a lead from forms that submit in the browser to a third party (e.g. a booking widget) and never reach WordPress. The visitor is resolved server-side, so attribution still works with no JavaScript access to the visitor cookie.
+* Embedded / external form capture: a first-party endpoint and a small JavaScript helper (window.mbuzz.captureLead) let you report a lead from forms that submit in the browser to a third party (e.g. an embedded CRM or scheduling widget) and never reach WordPress. The visitor is resolved server-side, so attribution still works with no JavaScript access to the visitor cookie.
 * Clearer Contact Form 7 mapping panel: the "mbuzz name" field is now hidden for roles that don't use one (user ID, revenue, currency, ignore).
 
 = 0.2.0-alpha =
