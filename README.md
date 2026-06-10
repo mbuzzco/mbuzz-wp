@@ -22,7 +22,7 @@ Until the WordPress.org listing is live, install from the release zip:
 1. Download the latest `mbuzz-attribution.zip` from [GitHub releases](https://github.com/mbuzzco/mbuzz-wp/releases).
 2. In wp-admin: **Plugins → Add New → Upload Plugin**, choose the zip, **Install Now**, then **Activate**.
 
-Building from source instead? Run `composer install --no-dev -o` and zip the plugin folder — `vendor/` must be included.
+Building from source instead? Run `bin/build.sh` — it produces the installable zip in `dist/` (production deps bundled, dev cruft stripped, with self-checks). Do not hand-roll the zip.
 
 ### 2. Add your API key
 
