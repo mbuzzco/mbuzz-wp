@@ -28,14 +28,16 @@ class Cf7PanelTemplateTest extends TestCase
         Monkey\setUp();
 
         Functions\stubs([
-            'esc_attr'     => static fn($v) => $v,
-            'esc_html'     => static fn($v) => $v,
-            'esc_url'      => static fn($v) => $v,
-            'esc_html__'   => static fn($v) => $v,
-            'esc_html_e'   => static function ($v): void { echo $v; },
-            '__'           => static fn($v) => $v,
-            'checked'      => static function ($a, $b = true): void {},
-            'selected'     => static function ($a, $b = true): void {},
+            'esc_attr'       => static fn($v) => $v,
+            'esc_html'       => static fn($v) => $v,
+            'esc_url'        => static fn($v) => $v,
+            'esc_attr__'     => static fn($v) => $v,
+            'esc_html__'     => static fn($v) => $v,
+            'esc_html_e'     => static function ($v): void { echo $v; },
+            '__'             => static fn($v) => $v,
+            'wp_json_encode' => static fn($v) => json_encode($v),
+            'checked'        => static function ($a, $b = true): void {},
+            'selected'       => static function ($a, $b = true): void {},
         ]);
     }
 
