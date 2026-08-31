@@ -88,4 +88,28 @@ class Cf7PanelPresenterTest extends TestCase
         $this->assertSame(Roles::USER_ID, $row['role']);
         $this->assertFalse($row['key_used']); // user_id is the key — no mbuzz name
     }
+    public function testKeepsAMappedFieldTheScannerCannotSee(): void
+    {
+        // Injected by another plugin as raw HTML: absent from scan_form_tags(),
+        // present in the posted data. A saved mapping must not vanish.
+        $map = $this->map([
+            'lineleader_form_mode' => [FieldMap::K_ROLE => Roles::EVENT_TYPE],
+        ]);
+
+        $fields = array_column($this->present($map, ['GuardianEmail'])['rows'], 'field');
+
+        $this->assertSame(['GuardianEmail', 'lineleader_form_mode'], $fields);
+    }
+
+    public function testDoesNotDuplicateAFieldThatIsAlsoATag(): void
+    {
+        $map = $this->map([
+            'GuardianEmail' => [FieldMap::K_ROLE => Roles::USER_ID],
+        ]);
+
+        $fields = array_column($this->present($map, ['GuardianEmail'])['rows'], 'field');
+
+        $this->assertSame(['GuardianEmail'], $fields);
+    }
+
 }

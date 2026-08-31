@@ -72,6 +72,45 @@ final class FormMapFields
             $fields[$name] = $entry;
         }
 
+        $fields = self::withExtraField($fields, $raw[FieldMap::K_EXTRA] ?? null);
+
         return new FieldMap($enabled, $trackAs, $type, $capture, $fields);
     }
+    /**
+     * Merge the panel's "add a field that isn't listed" row. Lets an admin map
+     * an input another plugin injects into the form as raw HTML — submitted with
+     * the form, but not a CF7 tag, so it never appears in the scanned list.
+     *
+     * @param array<string, array<string, string>> $fields
+     * @param mixed                                $extra
+     * @return array<string, array<string, string>>
+     */
+    private static function withExtraField(array $fields, $extra): array
+    {
+        if (! is_array($extra)) {
+            return $fields;
+        }
+
+        $name = sanitize_text_field((string) ($extra[FieldMap::K_EXTRA_FIELD] ?? ''));
+        $role = (string) ($extra[FieldMap::K_ROLE] ?? Roles::IGNORE);
+
+        if ($name === '' || ! Roles::isValid($role) || $role === Roles::IGNORE) {
+            return $fields;
+        }
+
+        $entry = [FieldMap::K_ROLE => $role];
+
+        if (in_array($role, Roles::KEYED, true)) {
+            $key = sanitize_key((string) ($extra[FieldMap::K_KEY] ?? ''));
+            if ($key === '') {
+                return $fields;
+            }
+            $entry[FieldMap::K_KEY] = $key;
+        }
+
+        $fields[$name] = $entry;
+
+        return $fields;
+    }
+
 }

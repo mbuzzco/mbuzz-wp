@@ -40,6 +40,9 @@ final class Cf7PanelPresenter
             'capture_page_as_name' => $this->name([FieldMap::K_CAPTURE_PAGE_AS]),
             'role_options'         => Roles::ALL,
             'keyed_roles'          => Roles::KEYED,
+            'extra_field_name'     => $this->name([FieldMap::K_EXTRA, FieldMap::K_EXTRA_FIELD]),
+            'extra_role_name'      => $this->name([FieldMap::K_EXTRA, FieldMap::K_ROLE]),
+            'extra_key_name'       => $this->name([FieldMap::K_EXTRA, FieldMap::K_KEY]),
             'rows'                 => $this->rows($map, $fieldNames),
             'docs_url'             => Links::DOCS,
         ];
@@ -52,7 +55,7 @@ final class Cf7PanelPresenter
     private function rows(FieldMap $map, array $fieldNames): array
     {
         $rows = [];
-        foreach (array_values($fieldNames) as $index => $field) {
+        foreach (array_values(self::withMappedFields($map, $fieldNames)) as $index => $field) {
             $config = $map->fields[$field] ?? [FieldMap::K_ROLE => Roles::IGNORE];
             $role   = (string) ($config[FieldMap::K_ROLE] ?? Roles::IGNORE);
             $rows[] = [
@@ -70,6 +73,24 @@ final class Cf7PanelPresenter
         }
 
         return $rows;
+    }
+
+    /**
+     * The scanned CF7 tags, plus any field the map already covers that the
+     * scanner cannot see. Some form fields are injected into the template as
+     * raw HTML by other plugins (e.g. a booking integration's hidden inputs);
+     * they are absent from scan_form_tags() but present in the posted data, so
+     * a saved mapping for one must stay visible and editable rather than
+     * silently vanishing from the table.
+     *
+     * @param array<int, string> $fieldNames
+     * @return array<int, string>
+     */
+    private static function withMappedFields(FieldMap $map, array $fieldNames): array
+    {
+        $extra = array_diff(array_keys($map->fields), $fieldNames);
+
+        return array_merge(array_values($fieldNames), array_values($extra));
     }
 
     /**

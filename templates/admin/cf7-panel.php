@@ -41,6 +41,7 @@ $role_labels = [
     Roles::PROPERTY => __('Property', 'mbuzz-attribution'),
     Roles::REVENUE  => __('Revenue', 'mbuzz-attribution'),
     Roles::CURRENCY => __('Currency', 'mbuzz-attribution'),
+    Roles::EVENT_TYPE => __('Event / conversion name', 'mbuzz-attribution'),
     Roles::IGNORE   => __('Ignore', 'mbuzz-attribution'),
 ];
 ?>
@@ -120,4 +121,33 @@ $role_labels = [
 		</tbody>
 	</table>
 	<p class="description"><?php esc_html_e('Sensitive fields (children, dates of birth) default to "Ignore" — turn them on only if you mean to.', 'mbuzz-attribution'); ?></p>
+
+	<h4><?php esc_html_e('Add a field that isn\'t listed', 'mbuzz-attribution'); ?></h4>
+	<p class="description">
+		<?php esc_html_e('Some plugins add their own hidden inputs to a form. Those are submitted with the form but aren\'t Contact Form 7 fields, so they don\'t appear above. Enter the input\'s name exactly as it is submitted to map it.', 'mbuzz-attribution'); ?>
+	</p>
+	<table class="widefat striped">
+		<tbody>
+			<tr>
+				<td>
+					<label class="screen-reader-text" for="mbuzz-extra-field"><?php esc_html_e('Field name', 'mbuzz-attribution'); ?></label>
+					<input type="text" id="mbuzz-extra-field" name="<?php echo esc_attr($extra_field_name); ?>" value="" class="regular-text" placeholder="<?php echo esc_attr__('e.g. lineleader_form_mode', 'mbuzz-attribution'); ?>">
+				</td>
+				<td>
+					<label class="screen-reader-text" for="mbuzz-extra-role"><?php esc_html_e('Role', 'mbuzz-attribution'); ?></label>
+					<select id="mbuzz-extra-role" name="<?php echo esc_attr($extra_role_name); ?>">
+						<?php foreach ($role_options as $option) : ?>
+							<option value="<?php echo esc_attr($option); ?>">
+								<?php echo esc_html($role_labels[$option] ?? $option); ?>
+							</option>
+						<?php endforeach; ?>
+					</select>
+				</td>
+				<td>
+					<label class="screen-reader-text" for="mbuzz-extra-key"><?php esc_html_e('mbuzz name', 'mbuzz-attribution'); ?></label>
+					<input type="text" id="mbuzz-extra-key" name="<?php echo esc_attr($extra_key_name); ?>" value="" class="regular-text" placeholder="<?php echo esc_attr__('e.g. team_size', 'mbuzz-attribution'); ?>">
+				</td>
+			</tr>
+		</tbody>
+	</table>
 <?php endif; ?>

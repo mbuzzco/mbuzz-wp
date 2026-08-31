@@ -4,7 +4,7 @@ Tags: attribution, analytics, woocommerce, marketing, conversion-tracking
 Requires at least: 6.5
 Tested up to: 6.7
 Requires PHP: 8.1
-Stable tag: 0.3.2-alpha
+Stable tag: 0.4.0-alpha
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -54,6 +54,10 @@ Reporting lives at app.mbuzz.co. This plugin handles capture and configuration
 only.
 
 == Changelog ==
+
+= 0.4.0-alpha =
+* New **Event / conversion name** field role. A form that submits in more than one mode — an enquiry now, a tour booking later, from the same form — can name each submission from a field's value instead of being locked to one name. Leave the field out of a submission and the form's configured name is used.
+* You can now map a field that isn't listed. Some plugins add their own hidden inputs to a form; they're submitted with it but aren't Contact Form 7 fields, so they never appeared in the mapping table. Enter the input's name to map it.
 
 = 0.3.2-alpha =
 * Fixed: the "mbuzz name" box was hidden on every row, including fields that had a name saved. Nothing was lost — the values were still stored — but a mapped field looked unmapped. The panel now leaves a name visible unless it is certain the role doesn't use one.

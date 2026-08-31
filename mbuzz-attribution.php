@@ -3,7 +3,7 @@
  * Plugin Name:       Mbuzz Attribution
  * Plugin URI:        https://mbuzz.co/wordpress
  * Description:       Server-side multi-touch attribution for WordPress and WooCommerce.
- * Version:           0.3.2-alpha
+ * Version:           0.4.0-alpha
  * Requires at least: 6.5
  * Requires PHP:      8.1
  * Author:            Mbuzz
@@ -21,7 +21,7 @@ if (! defined('ABSPATH')) {
     exit;
 }
 
-define('MBUZZ_ATTRIBUTION_VERSION', '0.3.2-alpha');
+define('MBUZZ_ATTRIBUTION_VERSION', '0.4.0-alpha');
 define('MBUZZ_ATTRIBUTION_FILE', __FILE__);
 define('MBUZZ_ATTRIBUTION_DIR', plugin_dir_path(__FILE__));
 define('MBUZZ_ATTRIBUTION_URL', plugin_dir_url(__FILE__));

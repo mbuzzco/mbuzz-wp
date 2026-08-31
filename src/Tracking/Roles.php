@@ -19,6 +19,16 @@ final class Roles
     public const PROPERTY = 'property';
     public const REVENUE  = 'revenue';
     public const CURRENCY = 'currency';
+
+    /**
+     * Names the hit itself: the field's value becomes the conversion/event type
+     * for this submission, overriding the map's type. For forms that submit the
+     * same CF7 form in more than one mode (e.g. an embedded booking flow posting
+     * an enquiry and then a tour), where the mode is only knowable per submission.
+     * Unkeyed — it names the hit, so there is no mbuzz-side key to give it.
+     */
+    public const EVENT_TYPE = 'event_type';
+
     public const IGNORE   = 'ignore';
 
     /** @var array<int, string> */
@@ -28,6 +38,7 @@ final class Roles
         self::PROPERTY,
         self::REVENUE,
         self::CURRENCY,
+        self::EVENT_TYPE,
         self::IGNORE,
     ];
 

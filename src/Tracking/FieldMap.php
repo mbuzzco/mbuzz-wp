@@ -25,6 +25,10 @@ final class FieldMap
     public const K_ROLE            = 'role';
     public const K_KEY             = 'key';
 
+    // The panel's "add a field that isn't listed" row (input only, never stored).
+    public const K_EXTRA       = 'extra';
+    public const K_EXTRA_FIELD = 'field';
+
     // Page-descriptor keys supplied by the FormSource adapter.
     public const PAGE_ID    = 'id';
     public const PAGE_TITLE = 'title';
@@ -99,6 +103,7 @@ final class FieldMap
         $properties = [];
         $revenue    = null;
         $currency   = null;
+        $type       = null;
 
         foreach ($this->fields as $fieldName => $config) {
             if (! is_array($config) || ! array_key_exists($fieldName, $posted)) {
@@ -133,6 +138,9 @@ final class FieldMap
                 case Roles::CURRENCY:
                     $currency = self::nonEmptyScalar($value) ?? $currency;
                     break;
+                case Roles::EVENT_TYPE:
+                    $type ??= self::nonEmptyScalar($value);
+                    break;
                 // Roles::IGNORE and anything unrecognized: skipped.
             }
         }
@@ -147,7 +155,7 @@ final class FieldMap
             $properties[self::PROP_PAGE_ID] = (int) $page[self::PAGE_ID];
         }
 
-        return new ResolvedHit($this->trackAs, $this->type, $userId, $traits, $properties, $revenue, $currency);
+        return new ResolvedHit($this->trackAs, $type ?? $this->type, $userId, $traits, $properties, $revenue, $currency);
     }
 
     /**

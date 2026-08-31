@@ -109,4 +109,64 @@ class FormMapFieldsTest extends TestCase
         $this->assertTrue(FormMapFields::sanitize([FieldMap::K_ENABLED => '1'])->enabled);
         $this->assertFalse(FormMapFields::sanitize([])->enabled);
     }
+    // --- The "add a field that isn't listed" row ---
+
+    public function testAddsAnExtraFieldNotPresentInTheScannedList(): void
+    {
+        $map = FormMapFields::sanitize([
+            FieldMap::K_ENABLED  => '1',
+            FieldMap::K_TRACK_AS => TrackAs::EVENT,
+            FieldMap::K_TYPE     => 'll_submit_enquiry',
+            FieldMap::K_EXTRA    => [
+                FieldMap::K_EXTRA_FIELD => 'lineleader_form_mode',
+                FieldMap::K_ROLE        => Roles::EVENT_TYPE,
+            ],
+        ]);
+
+        $this->assertSame(
+            [Roles::EVENT_TYPE],
+            [$map->fields['lineleader_form_mode'][FieldMap::K_ROLE]]
+        );
+    }
+
+    public function testIgnoresAnExtraRowWithNoFieldName(): void
+    {
+        $map = FormMapFields::sanitize([
+            FieldMap::K_ENABLED => '1',
+            FieldMap::K_EXTRA   => [
+                FieldMap::K_EXTRA_FIELD => '   ',
+                FieldMap::K_ROLE        => Roles::EVENT_TYPE,
+            ],
+        ]);
+
+        $this->assertSame([], $map->fields);
+    }
+
+    public function testIgnoresAnExtraKeyedRowWithNoKey(): void
+    {
+        $map = FormMapFields::sanitize([
+            FieldMap::K_ENABLED => '1',
+            FieldMap::K_EXTRA   => [
+                FieldMap::K_EXTRA_FIELD => 'some_input',
+                FieldMap::K_ROLE        => Roles::PROPERTY,
+                FieldMap::K_KEY         => '',
+            ],
+        ]);
+
+        $this->assertSame([], $map->fields);
+    }
+
+    public function testExtraRowPreservesFieldNameCaseAndHyphens(): void
+    {
+        $map = FormMapFields::sanitize([
+            FieldMap::K_ENABLED => '1',
+            FieldMap::K_EXTRA   => [
+                FieldMap::K_EXTRA_FIELD => 'LL-Tour_Mode',
+                FieldMap::K_ROLE        => Roles::EVENT_TYPE,
+            ],
+        ]);
+
+        $this->assertArrayHasKey('LL-Tour_Mode', $map->fields);
+    }
+
 }

@@ -173,4 +173,59 @@ class FieldMapTest extends TestCase
         $this->assertSame(FieldMap::DEFAULT_TYPE, $map->type);
         $this->assertSame([], $map->fields);
     }
+    // --- Event type from a field (Roles::EVENT_TYPE) ---
+
+    public function testEventTypeFieldOverridesTheMapType(): void
+    {
+        $hit = $this->mapWith(
+            ['lineleader_form_mode' => [FieldMap::K_ROLE => Roles::EVENT_TYPE]],
+            'll_submit_enquiry'
+        )->resolve(['lineleader_form_mode' => 'll_submit_tour']);
+
+        $this->assertSame('ll_submit_tour', $hit->type);
+    }
+
+    public function testEventTypeFieldFallsBackWhenAbsent(): void
+    {
+        $hit = $this->mapWith(
+            ['lineleader_form_mode' => [FieldMap::K_ROLE => Roles::EVENT_TYPE]],
+            'll_submit_enquiry'
+        )->resolve([]);
+
+        $this->assertSame('ll_submit_enquiry', $hit->type);
+    }
+
+    public function testEventTypeFieldFallsBackWhenBlank(): void
+    {
+        $hit = $this->mapWith(
+            ['lineleader_form_mode' => [FieldMap::K_ROLE => Roles::EVENT_TYPE]],
+            'll_submit_enquiry'
+        )->resolve(['lineleader_form_mode' => '   ']);
+
+        $this->assertSame('ll_submit_enquiry', $hit->type);
+    }
+
+    public function testEventTypeFieldEmitsNoProperty(): void
+    {
+        $hit = $this->mapWith(
+            ['lineleader_form_mode' => [FieldMap::K_ROLE => Roles::EVENT_TYPE]],
+            'll_submit_enquiry'
+        )->resolve(['lineleader_form_mode' => 'll_submit_tour']);
+
+        $this->assertSame([], $hit->properties);
+    }
+
+    /**
+     * @param array<string, array<string, string>> $fields
+     */
+    private function mapWith(array $fields, string $type): FieldMap
+    {
+        return FieldMap::fromArray([
+            FieldMap::K_ENABLED  => true,
+            FieldMap::K_TRACK_AS => TrackAs::EVENT,
+            FieldMap::K_TYPE     => $type,
+            FieldMap::K_FIELDS   => $fields,
+        ]);
+    }
+
 }
