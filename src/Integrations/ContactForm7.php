@@ -27,6 +27,12 @@ final class ContactForm7
     private const META_CONTAINER_POST = 'container_post_id';
     private const META_URL            = 'url';
 
+    /** Recorded when CF7 itself rejected the submission before we saw it. */
+    public const OUTCOME_CF7_STATUS = 'cf7_status';
+
+    /** Recorded when the WP Consent API withheld consent. */
+    public const OUTCOME_NO_CONSENT = 'no_consent';
+
     /**
      * Statuses that represent a real, completed submission.
      *
@@ -73,10 +79,14 @@ final class ContactForm7
      */
     public static function onSubmit(object $contactForm, array $result): void
     {
-        if (! in_array($result[self::RESULT_STATUS] ?? '', self::SUCCESS_STATUSES, true)) {
+        $status = (string) ($result[self::RESULT_STATUS] ?? '');
+
+        if (! in_array($status, self::SUCCESS_STATUSES, true)) {
+            TrackingEngine::note(self::OUTCOME_CF7_STATUS . ':' . ($status !== '' ? $status : 'none'));
             return;
         }
         if (! Consent::granted()) {
+            TrackingEngine::note(self::OUTCOME_NO_CONSENT);
             return;
         }
 

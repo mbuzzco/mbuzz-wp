@@ -4,7 +4,7 @@ Tags: attribution, analytics, woocommerce, marketing, conversion-tracking
 Requires at least: 6.5
 Tested up to: 6.7
 Requires PHP: 8.1
-Stable tag: 0.4.2-alpha
+Stable tag: 0.4.3-alpha
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -54,6 +54,9 @@ Reporting lives at app.mbuzz.co. This plugin handles capture and configuration
 only.
 
 == Changelog ==
+
+= 0.4.3-alpha =
+* Diagnostics now show the **last form submission** the site saw and what became of it — sent, or the reason it wasn't: no mapping, tracking off for that form, consent withheld, or Contact Form 7 reporting the submission didn't complete. A form that silently fires nothing is otherwise indistinguishable from one whose call was rejected.
 
 = 0.4.2-alpha =
 * Fixed: 0.3.2 stopped listing Conditional Fields groups in the mapping table. The scanned field list also determines what a save keeps, so saving a form after that release could drop fields from its mapping. Only the submit button is excluded again.

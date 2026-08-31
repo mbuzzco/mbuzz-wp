@@ -24,6 +24,8 @@ class TrackingEngineTest extends TestCase
     /** @var array<int, array{method:string, url:string, payload:?array}> */
     private array $captured = [];
 
+    private ?string $recordedOutcome = null;
+
     protected function setUp(): void
     {
         Monkey\setUp();
@@ -33,6 +35,14 @@ class TrackingEngineTest extends TestCase
         Functions\when('add_action')->justReturn(true);
         Functions\when('apply_filters')->alias(static fn ($_name, $value) => $value);
         Functions\when('get_post_meta')->justReturn(''); // default: no saved map
+
+        $this->recordedOutcome = null;
+        Functions\when('set_transient')->alias(function ($key, $value) {
+            if ($key === TrackingEngine::TRANSIENT_LAST_SUBMISSION && is_array($value)) {
+                $this->recordedOutcome = $value['outcome'] ?? null;
+            }
+            return true;
+        });
 
         Mbuzz::init(['api_key' => 'sk_test_engine']);
         Mbuzz::getClient()->setTransport(function ($method, $url, $payload) {
@@ -228,4 +238,34 @@ class TrackingEngineTest extends TestCase
 
         $this->assertCount(0, $this->captured); // guarded, no RuntimeException
     }
+    // --- Why a submission did not track (diagnostics) ---
+
+    public function testRecordsThatTheFormWasNotConfigured(): void
+    {
+        TrackingEngine::handle($this->source([]));   // default: no saved map
+
+        $this->assertSame(TrackingEngine::OUTCOME_NOT_CONFIGURED, $this->recordedOutcome);
+    }
+
+    public function testRecordsThatTheHitWasSent(): void
+    {
+        $this->withMap($this->conversionMap(['Email' => [FieldMap::K_ROLE => Roles::USER_ID]]));
+
+        TrackingEngine::handle($this->source(['Email' => 'jo@example.com']));
+
+        $this->assertSame(TrackingEngine::OUTCOME_SENT, $this->recordedOutcome);
+    }
+
+    public function testRecordsThatAFilterSkippedTheSubmission(): void
+    {
+        $this->withMap($this->conversionMap(['Email' => [FieldMap::K_ROLE => Roles::USER_ID]]));
+        Functions\when('apply_filters')->alias(
+            static fn ($name, $value) => $name === TrackingEngine::FILTER_SKIP ? true : $value
+        );
+
+        TrackingEngine::handle($this->source(['Email' => 'jo@example.com']));
+
+        $this->assertSame(TrackingEngine::OUTCOME_SKIPPED_BY_FILTER, $this->recordedOutcome);
+    }
+
 }

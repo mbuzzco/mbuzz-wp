@@ -29,6 +29,7 @@ class WooCommerceTest extends TestCase
     protected function setUp(): void
     {
         Monkey\setUp();
+        Functions\when('set_transient')->justReturn(true);
 
         $this->captured     = [];
         $this->convCounter  = 0;

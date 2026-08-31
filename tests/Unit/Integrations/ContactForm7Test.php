@@ -31,6 +31,7 @@ class ContactForm7Test extends TestCase
         $_COOKIE['_mbuzz_vid'] = str_repeat('a', 64);
 
         Functions\when('add_action')->justReturn(true);
+        Functions\when('set_transient')->justReturn(true);
         Functions\when('apply_filters')->alias(static fn ($_name, $value) => $value);
         Functions\when('wp_has_consent')->justReturn(true); // consent granted by default
         Functions\when('get_post_meta')->justReturn(''); // no map by default

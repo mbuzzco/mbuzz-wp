@@ -14,6 +14,9 @@ declare(strict_types=1);
 
 namespace Mbuzz\WP\Settings;
 
+use Mbuzz\WP\Integrations\ContactForm7;
+use Mbuzz\WP\Tracking\TrackingEngine;
+
 final class Page
 {
     /** Submenu slug under the Mbuzz top-level menu (registered by ConversionsPage). */
@@ -96,6 +99,8 @@ final class Page
         }
         echo '</p>';
 
+        self::renderLastSubmission();
+
         echo '<p><strong>' . esc_html__('Last successful API call:', 'mbuzz-attribution') . '</strong> ';
         if (is_array($lastCall) && ! empty($lastCall['at'])) {
             echo esc_html(gmdate('Y-m-d H:i:s', (int) $lastCall['at'])) . ' UTC — '
@@ -130,4 +135,60 @@ final class Page
     {
         return $key === '' ? '' : substr($key, 0, 11) . str_repeat('•', 8);
     }
+    /**
+     * The last form submission this site saw and what became of it. Without
+     * this, a form that fires nothing is indistinguishable from one whose call
+     * was rejected — and diagnosing the difference needs shell access.
+     */
+    private static function renderLastSubmission(): void
+    {
+        $last = get_transient(TrackingEngine::TRANSIENT_LAST_SUBMISSION);
+
+        echo '<p><strong>' . esc_html__('Last form submission:', 'mbuzz-attribution') . '</strong> ';
+
+        if (! is_array($last) || empty($last['at'])) {
+            echo esc_html__('none seen yet', 'mbuzz-attribution') . '</p>';
+            return;
+        }
+
+        echo esc_html(gmdate('Y-m-d H:i:s', (int) $last['at'])) . ' UTC';
+
+        if (! empty($last['title'])) {
+            echo ' — ' . esc_html((string) $last['title']);
+        }
+
+        echo ' — ' . esc_html(self::outcomeLabel((string) $last['outcome']));
+
+        if (! empty($last['type'])) {
+            echo ' (' . esc_html((string) $last['type']) . ')';
+        }
+
+        echo '</p>';
+    }
+
+    private static function outcomeLabel(string $outcome): string
+    {
+        $labels = [
+            TrackingEngine::OUTCOME_SENT              => __('sent to mbuzz', 'mbuzz-attribution'),
+            TrackingEngine::OUTCOME_NOT_CONFIGURED    => __('not sent — this form has no mbuzz mapping, or tracking is off for it', 'mbuzz-attribution'),
+            TrackingEngine::OUTCOME_NO_API_KEY        => __('not sent — no API key', 'mbuzz-attribution'),
+            TrackingEngine::OUTCOME_SKIPPED_BY_FILTER => __('not sent — skipped by a mbuzz_skip_tracking filter', 'mbuzz-attribution'),
+            ContactForm7::OUTCOME_NO_CONSENT          => __('not sent — consent withheld', 'mbuzz-attribution'),
+        ];
+
+        if (isset($labels[$outcome])) {
+            return $labels[$outcome];
+        }
+
+        if (str_starts_with($outcome, ContactForm7::OUTCOME_CF7_STATUS . ':')) {
+            /* translators: %s: Contact Form 7 submission status */
+            return sprintf(
+                __('not sent — Contact Form 7 reported "%s", so the submission did not complete', 'mbuzz-attribution'),
+                substr($outcome, strlen(ContactForm7::OUTCOME_CF7_STATUS) + 1)
+            );
+        }
+
+        return $outcome;
+    }
+
 }
