@@ -30,12 +30,13 @@ final class Cf7EditorPanel
     private const PANEL_TITLE_KEY  = 'title';
     private const PANEL_CB_KEY     = 'callback';
     /**
-     * Tag types that are never data: the submit button, and the layout/plugin
-     * containers some add-ons register (Conditional Fields' `group`, CF7MLS's
-     * `cf7mls_step`). Listing them as mappable fields is noise at best and an
-     * invitation to map a container at worst.
+     * Tag types that are never data. Only the submit button: a form's own tags
+     * are the source of truth for what it can map, and excluding more than this
+     * has bitten us once already — the scanned list feeds BOTH the rendered
+     * rows and, through them, what a save persists, so dropping a type here
+     * silently drops it from every map saved afterwards.
      */
-    private const NON_FIELD_BASETYPES = ['submit', 'group', 'cf7mls_step'];
+    private const NON_FIELD_BASETYPES = ['submit'];
 
     /**
      * Panel behaviour ships as an enqueued asset, never inline: CF7 6.1+ routes

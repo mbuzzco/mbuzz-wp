@@ -4,7 +4,7 @@ Tags: attribution, analytics, woocommerce, marketing, conversion-tracking
 Requires at least: 6.5
 Tested up to: 6.7
 Requires PHP: 8.1
-Stable tag: 0.4.1-alpha
+Stable tag: 0.4.2-alpha
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -54,6 +54,9 @@ Reporting lives at app.mbuzz.co. This plugin handles capture and configuration
 only.
 
 == Changelog ==
+
+= 0.4.2-alpha =
+* Fixed: 0.3.2 stopped listing Conditional Fields groups in the mapping table. The scanned field list also determines what a save keeps, so saving a form after that release could drop fields from its mapping. Only the submit button is excluded again.
 
 = 0.4.1-alpha =
 * Fixed: submissions were only tracked when Contact Form 7 managed to send the notification email. A form whose mail is switched off or misconfigured — common when a CRM handles the lead instead — submitted fine and was never recorded. Submissions are now tracked whenever the form is accepted and processed, regardless of what happens to the email. Spam, validation failures and aborted submissions are still ignored.

@@ -16,16 +16,17 @@ use ReflectionMethod;
  */
 class Cf7EditorPanelScanTest extends TestCase
 {
-    public function testExcludesLayoutContainersAndSubmit(): void
+    public function testExcludesOnlyTheSubmitButton(): void
     {
         $names = $this->scan([
             ['name' => 'GuardianEmail',  'basetype' => 'email'],
             ['name' => 'group-1',        'basetype' => 'group'],
-            ['name' => 'cf7mls_step-1',  'basetype' => 'cf7mls_step'],
             ['name' => 'send',           'basetype' => 'submit'],
         ]);
 
-        $this->assertSame(['GuardianEmail'], $names);
+        // Only submit is excluded. Container tags stay: the scanned list feeds
+        // what a save persists, so excluding a type drops it from saved maps.
+        $this->assertSame(['GuardianEmail', 'group-1'], $names);
     }
 
     public function testKeepsOrdinaryFieldsAndDedupes(): void
