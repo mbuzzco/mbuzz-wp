@@ -105,6 +105,30 @@ class ContactForm7Test extends TestCase
         $this->assertCount(0, $this->captured);
     }
 
+    public function testMailFailedStillTracksTheSubmission(): void
+    {
+        // The form validated, was accepted, and was processed — only the email
+        // delivery failed. That is still a lead. Forms wired to a CRM commonly
+        // disable or misconfigure mail, and dropping these loses every one.
+        $this->withMap();
+        $this->withPosted(['CustomerRef' => 'CUST-9', 'CustomerEmail' => 'jo@example.com']);
+
+        ContactForm7::onSubmit($this->form(), [ContactForm7::RESULT_STATUS => ContactForm7::STATUS_MAIL_FAILED]);
+
+        $this->assertNotCount(0, $this->captured);
+    }
+
+    public function testSpamAndAbortedFireNothing(): void
+    {
+        $this->withMap();
+        $this->withPosted(['CustomerRef' => 'CUST-9', 'CustomerEmail' => 'jo@example.com']);
+
+        ContactForm7::onSubmit($this->form(), [ContactForm7::RESULT_STATUS => 'spam']);
+        ContactForm7::onSubmit($this->form(), [ContactForm7::RESULT_STATUS => 'aborted']);
+
+        $this->assertCount(0, $this->captured);
+    }
+
     public function testUnmappedFormFiresNothing(): void
     {
         // get_post_meta returns '' (no map) → opt-in → nothing, even on success.

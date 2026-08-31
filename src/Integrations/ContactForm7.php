@@ -19,15 +19,32 @@ use Mbuzz\WP\Tracking\TrackingEngine;
 
 final class ContactForm7
 {
-    public const RESULT_STATUS    = 'status';
-    public const STATUS_MAIL_SENT = 'mail_sent';
-    public const STATUS_DEMO_MODE = 'demo_mode';
+    public const RESULT_STATUS      = 'status';
+    public const STATUS_MAIL_SENT   = 'mail_sent';
+    public const STATUS_MAIL_FAILED = 'mail_failed';
+    public const STATUS_DEMO_MODE   = 'demo_mode';
 
     private const META_CONTAINER_POST = 'container_post_id';
     private const META_URL            = 'url';
 
-    /** Statuses that represent a real, completed submission. */
-    public const SUCCESS_STATUSES = [self::STATUS_MAIL_SENT, self::STATUS_DEMO_MODE];
+    /**
+     * Statuses that represent a real, completed submission.
+     *
+     * CF7 reaches exactly one of six statuses. Three mean the submission never
+     * happened — `validation_failed`, `spam`, `aborted` — and three mean it did:
+     * `mail_sent`, `demo_mode`, and `mail_failed`.
+     *
+     * `mail_failed` belongs here. It means the form validated, was accepted and
+     * was processed, and only the *email delivery* failed (see CF7's
+     * WPCF7_Submission::proceed()). That is a lead. Forms wired to a CRM often
+     * disable or misconfigure mail deliberately, and gating on mail delivery
+     * silently discards every submission they take.
+     */
+    public const SUCCESS_STATUSES = [
+        self::STATUS_MAIL_SENT,
+        self::STATUS_MAIL_FAILED,
+        self::STATUS_DEMO_MODE,
+    ];
 
     /** @var callable|null test seam: posted data */
     private static $postedDataProvider = null;
