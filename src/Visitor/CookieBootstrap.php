@@ -48,12 +48,35 @@ final class CookieBootstrap
     public const REASON_NOT_PERSISTED = 'cookie_not_persisted';
 
     /**
+     * A page response. May be stored by a full-page cache and replayed to every
+     * visitor, so it must NEVER carry a Set-Cookie for the visitor id: a cached
+     * one hands everyone the same id and collapses unrelated people into a
+     * single journey. Verified against nginx proxy_cache in
+     * `tests/Integration/page-cache.sh`.
+     */
+    public const CONTEXT_PAGE = 'page';
+
+    /**
+     * A response no full-page cache stores — the session REST route. Safe to
+     * mint on, and the only place we do. Because it is a real Set-Cookie header
+     * rather than document.cookie, the id keeps its full multi-year lifetime
+     * under Safari's ITP (JS-set cookies are capped at 7 days).
+     */
+    public const CONTEXT_ENDPOINT = 'endpoint';
+
+    /**
      * @param callable(string):void|null $onFailure notified when minting fails
+     * @param string                     $context   one of CONTEXT_*
      */
     public static function ensureVisitorCookie(
         ?CookieManager $cookies = null,
-        ?callable $onFailure = null
+        ?callable $onFailure = null,
+        string $context = self::CONTEXT_ENDPOINT
     ): void {
+        if ($context === self::CONTEXT_PAGE) {
+            return; // a cacheable response must never mint — see CONTEXT_PAGE
+        }
+
         if (isset($_COOKIE[CookieManager::VISITOR_COOKIE])) {
             return;
         }

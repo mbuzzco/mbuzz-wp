@@ -94,4 +94,34 @@ class CookieBootstrapTest extends TestCase
         $this->assertNull($recorded);
     }
 
+    // --- Minting must never happen on a cacheable response ---
+
+    public function testDoesNotMintOnAPageResponse(): void
+    {
+        // A page response can be stored by a full-page cache and replayed to
+        // everyone. If it carries Set-Cookie, every visitor is handed the SAME
+        // id and unrelated people collapse into one journey — corruption that
+        // is far harder to notice than a missing session. Only a response the
+        // cache will never store may mint.
+        CookieBootstrap::ensureVisitorCookie(
+            $this->capturingCookies(),
+            null,
+            CookieBootstrap::CONTEXT_PAGE
+        );
+
+        $this->assertSame([], $this->set, 'A cacheable page response minted a visitor cookie.');
+    }
+
+    public function testMintsOnAnUncachedEndpointResponse(): void
+    {
+        CookieBootstrap::ensureVisitorCookie(
+            $this->capturingCookies(),
+            null,
+            CookieBootstrap::CONTEXT_ENDPOINT
+        );
+
+        $this->assertCount(1, $this->set);
+        $this->assertSame(CookieManager::VISITOR_COOKIE, $this->set[0]['name']);
+    }
+
 }

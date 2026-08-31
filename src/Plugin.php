@@ -17,6 +17,7 @@ use Mbuzz\WP\Integrations\WooCommerce;
 use Mbuzz\WP\Privacy\Consent;
 use Mbuzz\WP\Privacy\PersonalData;
 use Mbuzz\WP\Rest\LeadController;
+use Mbuzz\WP\Rest\SessionController;
 use Mbuzz\WP\Settings\Cf7EditorPanel;
 use Mbuzz\WP\Settings\ConversionsPage;
 use Mbuzz\WP\Settings\Page as SettingsPage;
@@ -88,6 +89,7 @@ final class Plugin
 
         // Embedded / external form capture: first-party REST endpoint + JS helper.
         LeadController::register();
+        SessionController::register();
         add_action('wp_enqueue_scripts', [$this, 'enqueueCaptureHelper']);
     }
 
@@ -110,6 +112,19 @@ final class Plugin
         );
         wp_localize_script('mbuzz-capture', 'mbuzzCapture', [
             'endpoint' => esc_url_raw(rest_url(LeadController::NAMESPACE . LeadController::ROUTE)),
+        ]);
+
+        // Session bootstrap. A cached page never ran PHP, so this is the only
+        // thing that can establish the visitor — and it does so server-side.
+        wp_enqueue_script(
+            'mbuzz-session',
+            MBUZZ_ATTRIBUTION_URL . 'assets/js/mbuzz-session.js',
+            [],
+            MBUZZ_ATTRIBUTION_VERSION,
+            true
+        );
+        wp_localize_script('mbuzz-session', 'mbuzzSession', [
+            'endpoint' => esc_url_raw(rest_url(SessionController::NAMESPACE . SessionController::ROUTE)),
         ]);
     }
 
@@ -139,9 +154,10 @@ final class Plugin
         // Server-side-only deployments have no JS pixel to mint the visitor
         // cookie, and the SDK refuses to mint it itself. Do it here so
         // initFromRequest() has a visitor to create a session for.
-        CookieBootstrap::ensureVisitorCookie(null, static function (string $reason): void {
-            TrackingEngine::note($reason);
-        });
+        // A page response may be cached and replayed to everyone, so it never
+        // mints. The uncached session endpoint does that; here we only use a
+        // cookie the browser already holds.
+        CookieBootstrap::ensureVisitorCookie(null, null, CookieBootstrap::CONTEXT_PAGE);
 
         Mbuzz::initFromRequest();
     }

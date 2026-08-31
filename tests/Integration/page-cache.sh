@@ -57,6 +57,16 @@ start_proxy() {
 proxy_cache_path /tmp/nc levels=1:2 keys_zone=z:10m inactive=60m;
 server {
   listen ${PROXY_PORT};
+
+  # The REST API is never full-page cached. WP Rocket and Cloudflare APO both
+  # exclude it by default, which is why it is a safe place to mint. Modelling
+  # the proxy as caching /wp-json too would test a configuration nobody runs.
+  location /wp-json/ {
+    proxy_pass http://host.docker.internal:8888;
+    proxy_set_header Host \$host:${PROXY_PORT};
+    add_header X-Cache-Status "BYPASS" always;
+  }
+
   location / {
     proxy_pass http://host.docker.internal:8888;
     proxy_set_header Host \$host:${PROXY_PORT};
@@ -91,15 +101,32 @@ visitor_cookie_from() {  # $1 = url
 
 cache_status_of() { curl -s -o /dev/null -D - "$1" | tr -d '\r' | sed -n 's/^X-Cache-Status: //p' | head -1; }
 
+# --- helpers ---------------------------------------------------------------
+
+session_cookie_from() {  # $1 = base url — POST the session endpoint as the page script does
+  curl -s -i -X POST "$1/wp-json/mbuzz/v1/session" \
+    -H "Content-Type: application/json" -H "Origin: $1" \
+    -d '{"url":"'"$1"'/","referrer":""}' \
+    | tr -d '\r' | sed -n "s/^[Ss]et-[Cc]ookie: ${COOKIE}=\([^;]*\).*/\1/p" | head -1
+}
+
 # --- the tests -------------------------------------------------------------
 
 echo
-info "Baseline: no cache in front of WordPress"
+info "Baseline: a page response must NOT carry the visitor cookie"
 direct_cookie="$(visitor_cookie_from "$WP_URL/?nocache=$RANDOM")"
-if [ -n "$direct_cookie" ]; then
-  ok "an uncached page mints a visitor cookie"
+if [ -z "$direct_cookie" ]; then
+  ok "a page response mints nothing, so a cache cannot replay one visitor's id to everyone"
 else
-  bad "an uncached page mints a visitor cookie (nothing to cache-test — check the API key is set)"
+  bad "a page response carries Set-Cookie — a cache would hand every visitor the same id"
+fi
+
+info "Baseline: the uncached endpoint establishes the visitor"
+endpoint_cookie="$(session_cookie_from "$WP_URL")"
+if [ -n "$endpoint_cookie" ]; then
+  ok "the session endpoint mints a visitor (server-set, HttpOnly, full lifetime)"
+else
+  bad "the session endpoint mints nothing — check the API key is set"
 fi
 
 echo
@@ -110,14 +137,14 @@ status="$(cache_status_of "$PROXY_URL/")"
 [ "$status" = "HIT" ] && ok "the proxy is serving from cache (X-Cache-Status: HIT)" \
                       || bad "expected a cache HIT, got '${status:-none}' — the test is not exercising the bug"
 
-cached_cookie="$(visitor_cookie_from "$PROXY_URL/")"
-[ -n "$cached_cookie" ] && ok "a cached page still establishes a visitor" \
-                        || bad "a cached page establishes NO visitor — every submission from it is dropped"
+cached_cookie="$(session_cookie_from "$PROXY_URL")"
+[ -n "$cached_cookie" ] && ok "a visitor is established from a cached page (via the endpoint)" \
+                        || bad "no visitor established behind a cache — every submission is dropped"
 
 echo
 info "Mode 1b: two visitors on the same cached page must stay distinct"
-a="$(curl -s -i "$PROXY_URL/" | tr -d '\r' | sed -n "s/^[Ss]et-[Cc]ookie: ${COOKIE}=\([^;]*\).*/\1/p" | head -1)"
-b="$(curl -s -i "$PROXY_URL/" | tr -d '\r' | sed -n "s/^[Ss]et-[Cc]ookie: ${COOKIE}=\([^;]*\).*/\1/p" | head -1)"
+a="$(session_cookie_from "$PROXY_URL")"
+b="$(session_cookie_from "$PROXY_URL")"
 if [ -n "$a" ] && [ "$a" = "$b" ]; then
   bad "both visitors received the SAME id (${a:0:16}…) — a cached Set-Cookie merges strangers into one journey"
 elif [ -z "$a" ] && [ -z "$b" ]; then
@@ -130,7 +157,7 @@ echo
 info "Mode 2: Cloudflare strips Set-Cookie under Cache Everything"
 start_proxy strip
 curl -s -o /dev/null "$PROXY_URL/"
-stripped_cookie="$(visitor_cookie_from "$PROXY_URL/")"
+stripped_cookie="$(session_cookie_from "$PROXY_URL")"
 [ -n "$stripped_cookie" ] && ok "a visitor is established even when Set-Cookie is stripped" \
                           || bad "Set-Cookie stripped ⇒ no visitor, so nothing can be attributed"
 

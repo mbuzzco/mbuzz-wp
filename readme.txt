@@ -4,7 +4,7 @@ Tags: attribution, analytics, woocommerce, marketing, conversion-tracking
 Requires at least: 6.5
 Tested up to: 6.7
 Requires PHP: 8.1
-Stable tag: 0.4.5-alpha
+Stable tag: 0.5.0-alpha
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -54,6 +54,10 @@ Reporting lives at app.mbuzz.co. This plugin handles capture and configuration
 only.
 
 == Changelog ==
+
+= 0.5.0-alpha =
+* **Tracking now works on sites behind a full-page cache.** Cloudflare, WP Rocket, Varnish, LiteSpeed and most managed hosts serve pages without running PHP, so nothing established the visitor and every form submission from a cached page was silently discarded. Pages no longer set the visitor cookie at all — a small first-party request does, on a route caches never store. Your identity cookie is still created by the server, stays HttpOnly, and keeps its full two-year life.
+* Fixed: on a cache that stores cookies, every visitor could be given the same ID and appear as one person. Cached pages carry no cookie now, so this cannot happen.
 
 = 0.4.5-alpha =
 * Diagnostics now report when the visitor cookie could not be set at all. If something on a page sends output before mbuzz can set the cookie, every submission from that page is dropped — previously with no explanation anywhere.
