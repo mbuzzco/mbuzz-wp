@@ -120,31 +120,4 @@ $role_labels = [
 		</tbody>
 	</table>
 	<p class="description"><?php esc_html_e('Sensitive fields (children, dates of birth) default to "Ignore" — turn them on only if you mean to.', 'mbuzz-attribution'); ?></p>
-	<script>
-	( function () {
-		function sync( select ) {
-			var input = document.getElementById( select.getAttribute( 'data-key-target' ) );
-			if ( ! input ) {
-				return;
-			}
-			var na = input.parentNode.querySelector( '.mbuzz-key-na' );
-			var keyed = [];
-			try {
-				keyed = JSON.parse( select.getAttribute( 'data-keyed-roles' ) || '[]' );
-			} catch ( e ) {}
-			var used = keyed.indexOf( select.value ) !== -1;
-			input.style.display = used ? '' : 'none';
-			if ( na ) {
-				na.style.display = used ? 'none' : '';
-			}
-		}
-		var selects = document.querySelectorAll( '.mbuzz-role-select' );
-		for ( var i = 0; i < selects.length; i++ ) {
-			selects[ i ].addEventListener( 'change', function ( e ) {
-				sync( e.target );
-			} );
-			sync( selects[ i ] );
-		}
-	} )();
-	</script>
 <?php endif; ?>

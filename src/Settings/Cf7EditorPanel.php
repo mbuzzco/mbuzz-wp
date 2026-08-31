@@ -31,6 +31,19 @@ final class Cf7EditorPanel
     private const PANEL_CB_KEY     = 'callback';
     private const SUBMIT_BASETYPE  = 'submit';
 
+    /**
+     * Panel behaviour ships as an enqueued asset, never inline: CF7 6.1+ routes
+     * editor panel output through WPCF7_HTMLFormatter::print(), which runs
+     * wp_kses() with the admin allowlist. That list has no `script` element, so
+     * an inline <script> loses its tags and its body renders as page text.
+     */
+    public const SCRIPT_HANDLE = 'mbuzz-cf7-panel';
+
+    private const SCRIPT_PATH = 'assets/admin/cf7-panel.js';
+
+    /** CF7 registers its editor as a top-level admin page (slug `wpcf7`). */
+    private const CF7_SCREEN_HOOK = 'toplevel_page_wpcf7';
+
     public static function register(): void
     {
         if (! class_exists('WPCF7_ContactForm')) {
@@ -38,6 +51,7 @@ final class Cf7EditorPanel
         }
         add_filter('wpcf7_editor_panels', [self::class, 'addPanel']);
         add_action('wpcf7_save_contact_form', [self::class, 'save'], 10, 1);
+        add_action('admin_enqueue_scripts', [self::class, 'enqueueAssets'], 10, 1);
     }
 
     /**
@@ -52,6 +66,24 @@ final class Cf7EditorPanel
         ];
 
         return $panels;
+    }
+
+    /**
+     * Load the panel's behaviour on the CF7 form editor screen only.
+     */
+    public static function enqueueAssets(string $hookSuffix = ''): void
+    {
+        if ($hookSuffix !== self::CF7_SCREEN_HOOK) {
+            return;
+        }
+
+        wp_enqueue_script(
+            self::SCRIPT_HANDLE,
+            MBUZZ_ATTRIBUTION_URL . self::SCRIPT_PATH,
+            [],
+            MBUZZ_ATTRIBUTION_VERSION,
+            true
+        );
     }
 
     /**
