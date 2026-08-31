@@ -29,7 +29,13 @@ final class Cf7EditorPanel
     private const PANEL_TEMPLATE   = 'admin/cf7-panel';
     private const PANEL_TITLE_KEY  = 'title';
     private const PANEL_CB_KEY     = 'callback';
-    private const SUBMIT_BASETYPE  = 'submit';
+    /**
+     * Tag types that are never data: the submit button, and the layout/plugin
+     * containers some add-ons register (Conditional Fields' `group`, CF7MLS's
+     * `cf7mls_step`). Listing them as mappable fields is noise at best and an
+     * invitation to map a container at worst.
+     */
+    private const NON_FIELD_BASETYPES = ['submit', 'group', 'cf7mls_step'];
 
     /**
      * Panel behaviour ships as an enqueued asset, never inline: CF7 6.1+ routes
@@ -137,7 +143,7 @@ final class Cf7EditorPanel
                 $name = (string) ($tag['name'] ?? '');
                 $type = (string) ($tag['basetype'] ?? ($tag['type'] ?? ''));
             }
-            if ($name === '' || $type === self::SUBMIT_BASETYPE) {
+            if ($name === '' || in_array($type, self::NON_FIELD_BASETYPES, true)) {
                 continue;
             }
             $names[$name] = true; // dedupe

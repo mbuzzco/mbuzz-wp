@@ -57,6 +57,26 @@ class Cf7PanelTemplateTest extends TestCase
         );
     }
 
+    public function testKeyedRoleRendersItsNameInputVisible(): void
+    {
+        $html = $this->renderPanel();
+
+        // The Property row's name input must not be hidden server-side — the
+        // panel showing "—" on a populated Property row reads as data loss.
+        $this->assertMatchesRegularExpression(
+            '/<input[^>]*name="mbuzz_map\[fields\]\[Location\]\[key\]"[^>]*value="location"(?![^>]*display:none)[^>]*>/',
+            $html
+        );
+    }
+
+    public function testUnkeyedRoleHidesItsNameInput(): void
+    {
+        $this->assertMatchesRegularExpression(
+            '/<input[^>]*name="mbuzz_map\[fields\]\[GuardianEmail\]\[key\]"[^>]*display:none[^>]*>/',
+            $this->renderPanel()
+        );
+    }
+
     private function renderPanel(): string
     {
         $map = FieldMap::fromArray([
@@ -64,13 +84,13 @@ class Cf7PanelTemplateTest extends TestCase
             FieldMap::K_TRACK_AS => TrackAs::EVENT,
             FieldMap::K_TYPE     => 'll_submit_enquiry',
             FieldMap::K_FIELDS   => [
-                'GuardianEmail'     => [FieldMap::K_ROLE => Roles::USER_ID],
-                'GuardianFirstName' => [FieldMap::K_ROLE => Roles::TRAIT, FieldMap::K_KEY => 'first_name'],
+                'Location'      => [FieldMap::K_ROLE => Roles::PROPERTY, FieldMap::K_KEY => 'location'],
+                'GuardianEmail' => [FieldMap::K_ROLE => Roles::USER_ID],
             ],
         ]);
 
         $vm = (new Cf7PanelPresenter('mbuzz_map'))
-            ->present($map, ['GuardianEmail', 'GuardianFirstName']);
+            ->present($map, ['Location', 'GuardianEmail']);
 
         return View::capture('admin/cf7-panel', $vm);
     }

@@ -4,7 +4,7 @@ Tags: attribution, analytics, woocommerce, marketing, conversion-tracking
 Requires at least: 6.5
 Tested up to: 6.7
 Requires PHP: 8.1
-Stable tag: 0.3.1-alpha
+Stable tag: 0.3.2-alpha
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -54,6 +54,10 @@ Reporting lives at app.mbuzz.co. This plugin handles capture and configuration
 only.
 
 == Changelog ==
+
+= 0.3.2-alpha =
+* Fixed: the "mbuzz name" box was hidden on every row, including fields that had a name saved. Nothing was lost — the values were still stored — but a mapped field looked unmapped. The panel now leaves a name visible unless it is certain the role doesn't use one.
+* Layout containers are no longer listed as mappable fields. Conditional Fields groups (group-1, group-2) and multi-step markers (cf7mls_step-1) are form structure, not data, so they no longer clutter the mapping table.
 
 = 0.3.1-alpha =
 * Fixed: on Contact Form 7 6.1 and later, the mapping panel's JavaScript was displayed as text at the bottom of the Mbuzz tab instead of running. CF7 now filters editor-panel markup and removes inline scripts, so the panel's behaviour ships as a proper asset. The "mbuzz name" box once again shows and hides as you change a field's role.
