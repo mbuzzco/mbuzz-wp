@@ -69,4 +69,29 @@ class CookieBootstrapTest extends TestCase
         $this->assertCount(1, $this->set);
         $this->assertArrayNotHasKey('_mbuzz_vid', $_COOKIE);
     }
+    public function testReportsWhyTheCookieCouldNotBeMinted(): void
+    {
+        // setcookie() fails once headers are sent — common on theme/builder
+        // heavy pages. Silently doing nothing here strands every submission on
+        // that page with no visitor, and nothing anywhere says why.
+        $recorded = null;
+        CookieBootstrap::ensureVisitorCookie(
+            $this->capturingCookies(false),
+            static function (string $reason) use (&$recorded): void { $recorded = $reason; }
+        );
+
+        $this->assertSame(CookieBootstrap::REASON_NOT_PERSISTED, $recorded);
+    }
+
+    public function testReportsNothingWhenTheCookieMints(): void
+    {
+        $recorded = null;
+        CookieBootstrap::ensureVisitorCookie(
+            $this->capturingCookies(true),
+            static function (string $reason) use (&$recorded): void { $recorded = $reason; }
+        );
+
+        $this->assertNull($recorded);
+    }
+
 }

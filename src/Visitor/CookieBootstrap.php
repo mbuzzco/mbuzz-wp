@@ -39,8 +39,21 @@ final class CookieBootstrap
      * headers-already-sent failure doesn't leave us claiming a visitor whose
      * cookie never reached the browser (which would churn a new id per page).
      */
-    public static function ensureVisitorCookie(?CookieManager $cookies = null): void
-    {
+    /**
+     * Why the cookie could not be minted. `setcookie()` fails once headers are
+     * sent, which happens on pages where a theme or plugin emits output before
+     * `template_redirect`. Every submission on such a page is then dropped by
+     * the SDK for having no visitor, so the reason has to surface somewhere.
+     */
+    public const REASON_NOT_PERSISTED = 'cookie_not_persisted';
+
+    /**
+     * @param callable(string):void|null $onFailure notified when minting fails
+     */
+    public static function ensureVisitorCookie(
+        ?CookieManager $cookies = null,
+        ?callable $onFailure = null
+    ): void {
         if (isset($_COOKIE[CookieManager::VISITOR_COOKIE])) {
             return;
         }
@@ -50,6 +63,11 @@ final class CookieBootstrap
 
         if ($cookies->setVisitorId($visitorId)) {
             $_COOKIE[CookieManager::VISITOR_COOKIE] = $visitorId;
+            return;
+        }
+
+        if ($onFailure !== null) {
+            $onFailure(self::REASON_NOT_PERSISTED);
         }
     }
 

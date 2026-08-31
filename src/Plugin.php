@@ -21,6 +21,7 @@ use Mbuzz\WP\Settings\Cf7EditorPanel;
 use Mbuzz\WP\Settings\ConversionsPage;
 use Mbuzz\WP\Settings\Page as SettingsPage;
 use Mbuzz\WP\Settings\Repository as SettingsRepository;
+use Mbuzz\WP\Tracking\TrackingEngine;
 use Mbuzz\WP\Visitor\CookieBootstrap;
 
 final class Plugin
@@ -144,7 +145,9 @@ final class Plugin
         // Server-side-only deployments have no JS pixel to mint the visitor
         // cookie, and the SDK refuses to mint it itself. Do it here so
         // initFromRequest() has a visitor to create a session for.
-        CookieBootstrap::ensureVisitorCookie();
+        CookieBootstrap::ensureVisitorCookie(null, static function (string $reason): void {
+            TrackingEngine::note($reason);
+        });
 
         Mbuzz::initFromRequest();
     }

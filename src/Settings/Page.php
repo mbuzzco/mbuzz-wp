@@ -16,6 +16,7 @@ namespace Mbuzz\WP\Settings;
 
 use Mbuzz\WP\Integrations\ContactForm7;
 use Mbuzz\WP\Tracking\TrackingEngine;
+use Mbuzz\WP\Visitor\CookieBootstrap;
 
 final class Page
 {
@@ -175,6 +176,7 @@ final class Page
             TrackingEngine::OUTCOME_NO_API_KEY        => __('not sent — no API key', 'mbuzz-attribution'),
             TrackingEngine::OUTCOME_SKIPPED_BY_FILTER => __('not sent — skipped by a mbuzz_skip_tracking filter', 'mbuzz-attribution'),
             ContactForm7::OUTCOME_NO_CONSENT          => __('not sent — consent withheld', 'mbuzz-attribution'),
+            CookieBootstrap::REASON_NOT_PERSISTED     => __('no visitor cookie could be set — something on this page sent output before mbuzz could set it (a theme, page builder or plugin). Every submission from this page will be dropped until that is resolved.', 'mbuzz-attribution'),
         ];
 
         if (isset($labels[$outcome])) {
