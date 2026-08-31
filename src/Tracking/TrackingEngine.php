@@ -32,6 +32,14 @@ final class TrackingEngine
     public const OUTCOME_SKIPPED_BY_FILTER = 'skipped_by_filter';
     public const OUTCOME_SENT              = 'sent';
 
+    /**
+     * The SDK declined to send. It returns false without making a request when
+     * it has no visitor to attribute the hit to (Client::track) — the usual
+     * cause being no `_mbuzz_vid` cookie, e.g. a page served from a full-page
+     * cache never ran PHP to mint one.
+     */
+    public const OUTCOME_NOT_SENT          = 'not_sent';
+
     public static function handle(FormSource $form): void
     {
         if (Mbuzz::getClient() === null) {
@@ -50,9 +58,9 @@ final class TrackingEngine
             return;
         }
 
-        $hit = $map->resolve($form->postedData(), $form->page());
-        self::dispatch($hit);
-        self::record($form, self::OUTCOME_SENT, $hit->type);
+        $hit  = $map->resolve($form->postedData(), $form->page());
+        $sent = self::dispatch($hit);
+        self::record($form, $sent ? self::OUTCOME_SENT : self::OUTCOME_NOT_SENT, $hit->type);
     }
 
     /**
@@ -84,15 +92,17 @@ final class TrackingEngine
         );
     }
 
-    private static function dispatch(ResolvedHit $hit): void
+    /**
+     * @return bool whether the SDK actually sent the hit
+     */
+    private static function dispatch(ResolvedHit $hit): bool
     {
         if ($hit->hasIdentity()) {
             Mbuzz::identify($hit->userId, $hit->traits);
         }
 
         if ($hit->trackAs === TrackAs::EVENT) {
-            Mbuzz::event($hit->type, $hit->properties);
-            return;
+            return Mbuzz::event($hit->type, $hit->properties) !== false;
         }
 
         $options = [ConversionOptions::PROPERTIES => $hit->properties];
@@ -106,6 +116,6 @@ final class TrackingEngine
             $options[ConversionOptions::CURRENCY] = $hit->currency;
         }
 
-        Mbuzz::conversion($hit->type, $options);
+        return Mbuzz::conversion($hit->type, $options) !== false;
     }
 }

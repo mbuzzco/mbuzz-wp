@@ -170,6 +170,7 @@ final class Page
     {
         $labels = [
             TrackingEngine::OUTCOME_SENT              => __('sent to mbuzz', 'mbuzz-attribution'),
+            TrackingEngine::OUTCOME_NOT_SENT          => __('NOT sent — no visitor to attribute it to. The page the form sits on set no mbuzz visitor cookie, which usually means it was served from a full-page cache (CDN or caching plugin) and never ran PHP.', 'mbuzz-attribution'),
             TrackingEngine::OUTCOME_NOT_CONFIGURED    => __('not sent — this form has no mbuzz mapping, or tracking is off for it', 'mbuzz-attribution'),
             TrackingEngine::OUTCOME_NO_API_KEY        => __('not sent — no API key', 'mbuzz-attribution'),
             TrackingEngine::OUTCOME_SKIPPED_BY_FILTER => __('not sent — skipped by a mbuzz_skip_tracking filter', 'mbuzz-attribution'),

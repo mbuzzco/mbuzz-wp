@@ -4,7 +4,7 @@ Tags: attribution, analytics, woocommerce, marketing, conversion-tracking
 Requires at least: 6.5
 Tested up to: 6.7
 Requires PHP: 8.1
-Stable tag: 0.4.3-alpha
+Stable tag: 0.4.4-alpha
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -54,6 +54,9 @@ Reporting lives at app.mbuzz.co. This plugin handles capture and configuration
 only.
 
 == Changelog ==
+
+= 0.4.4-alpha =
+* Diagnostics now distinguish a submission that was sent from one the SDK dropped. An event with no visitor to attribute it to is never sent — the plugin previously reported it as sent anyway.
 
 = 0.4.3-alpha =
 * Diagnostics now show the **last form submission** the site saw and what became of it — sent, or the reason it wasn't: no mapping, tracking off for that form, consent withheld, or Contact Form 7 reporting the submission didn't complete. A form that silently fires nothing is otherwise indistinguishable from one whose call was rejected.

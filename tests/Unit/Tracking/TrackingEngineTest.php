@@ -268,4 +268,21 @@ class TrackingEngineTest extends TestCase
         $this->assertSame(TrackingEngine::OUTCOME_SKIPPED_BY_FILTER, $this->recordedOutcome);
     }
 
+    public function testRecordsThatTheSdkDroppedTheHit(): void
+    {
+        // The SDK returns false without making a request when it has no visitor
+        // to attribute to (Client::track). Reporting that as "sent" hides the
+        // single most common reason an event never arrives.
+        $this->withMap($this->conversionMap(
+            ['Email' => [FieldMap::K_ROLE => Roles::USER_ID]],
+            null,
+            TrackAs::EVENT
+        ));
+        unset($_COOKIE['_mbuzz_vid']); // no visitor in context
+
+        TrackingEngine::handle($this->source(['Email' => 'jo@example.com']));
+
+        $this->assertSame(TrackingEngine::OUTCOME_NOT_SENT, $this->recordedOutcome);
+    }
+
 }
