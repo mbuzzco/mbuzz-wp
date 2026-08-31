@@ -29,6 +29,14 @@ final class Plugin
     private static ?self $instance = null;
 
     private bool $registered = false;
+
+    // Why a front-end request was not tracked; surfaced in Settings → Diagnostics.
+    public const SKIP_NO_API_KEY   = 'page_no_api_key';
+    public const SKIP_NOT_FRONTEND = 'page_not_frontend';
+    public const SKIP_REST         = 'page_rest_request';
+    public const SKIP_XMLRPC       = 'page_xmlrpc_request';
+    public const SKIP_ADMIN_USER   = 'page_logged_in_admin';
+    public const SKIP_NO_CONSENT   = 'page_no_consent';
     private bool $sdkReady = false;
 
     public static function instance(): self
@@ -122,24 +130,10 @@ final class Plugin
 
     public function initFromRequest(): void
     {
-        if (! $this->sdkReady) {
+        $skip = $this->reasonToSkipRequest();
+        if ($skip !== null) {
+            TrackingEngine::notePageView($skip);
             return;
-        }
-
-        if (is_admin() || wp_doing_ajax() || wp_doing_cron() || is_robots()) {
-            return;
-        }
-        if (defined('REST_REQUEST') && REST_REQUEST) {
-            return;
-        }
-        if (defined('XMLRPC_REQUEST') && XMLRPC_REQUEST) {
-            return;
-        }
-        if ($this->shouldSkipForAdmin()) {
-            return;
-        }
-        if (! Consent::granted()) {
-            return; // no consent → no session, no visitor cookie
         }
 
         // Server-side-only deployments have no JS pixel to mint the visitor
@@ -150,6 +144,34 @@ final class Plugin
         });
 
         Mbuzz::initFromRequest();
+    }
+
+    /**
+     * Why this request will not be tracked, or null to proceed. Named reasons
+     * rather than bare early returns: a page that mints no visitor cookie
+     * silently drops every form submission on it, and 'nothing happened' is
+     * the hardest possible thing to diagnose from outside the server.
+     *
+     * @return string|null
+     */
+    private function reasonToSkipRequest(): ?string
+    {
+        $reasons = [
+            self::SKIP_NO_API_KEY  => fn (): bool => ! $this->sdkReady,
+            self::SKIP_NOT_FRONTEND => static fn (): bool => is_admin() || wp_doing_ajax() || wp_doing_cron() || is_robots(),
+            self::SKIP_REST        => static fn (): bool => defined('REST_REQUEST') && REST_REQUEST,
+            self::SKIP_XMLRPC      => static fn (): bool => defined('XMLRPC_REQUEST') && XMLRPC_REQUEST,
+            self::SKIP_ADMIN_USER  => fn (): bool => $this->shouldSkipForAdmin(),
+            self::SKIP_NO_CONSENT  => static fn (): bool => ! Consent::granted(),
+        ];
+
+        foreach ($reasons as $reason => $applies) {
+            if ($applies()) {
+                return $reason;
+            }
+        }
+
+        return null;
     }
 
     /**

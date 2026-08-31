@@ -15,6 +15,7 @@ declare(strict_types=1);
 namespace Mbuzz\WP\Settings;
 
 use Mbuzz\WP\Integrations\ContactForm7;
+use Mbuzz\WP\Plugin;
 use Mbuzz\WP\Tracking\TrackingEngine;
 use Mbuzz\WP\Visitor\CookieBootstrap;
 
@@ -100,6 +101,7 @@ final class Page
         }
         echo '</p>';
 
+        self::renderLastPageView();
         self::renderLastSubmission();
 
         echo '<p><strong>' . esc_html__('Last successful API call:', 'mbuzz-attribution') . '</strong> ';
@@ -192,6 +194,38 @@ final class Page
         }
 
         return $outcome;
+    }
+
+    /**
+     * The last front-end request the plugin declined to track, and why. Blank
+     * when the last page view was tracked normally.
+     */
+    private static function renderLastPageView(): void
+    {
+        $last = get_transient(TrackingEngine::TRANSIENT_LAST_PAGE_VIEW);
+        if (! is_array($last) || empty($last['at'])) {
+            return;
+        }
+
+        $labels = [
+            Plugin::SKIP_NO_API_KEY   => __('no API key', 'mbuzz-attribution'),
+            Plugin::SKIP_NOT_FRONTEND => __('not a front-end page view (admin, AJAX, cron or robots)', 'mbuzz-attribution'),
+            Plugin::SKIP_REST         => __('a REST request, not a page view', 'mbuzz-attribution'),
+            Plugin::SKIP_XMLRPC       => __('an XML-RPC request, not a page view', 'mbuzz-attribution'),
+            Plugin::SKIP_ADMIN_USER   => __('you are logged in as an administrator and "Track logged-in admins" is off', 'mbuzz-attribution'),
+            Plugin::SKIP_NO_CONSENT   => __('consent was withheld', 'mbuzz-attribution'),
+        ];
+
+        $reason = (string) ($last['reason'] ?? '');
+
+        echo '<p><strong>' . esc_html__('Last untracked page view:', 'mbuzz-attribution') . '</strong> '
+            . esc_html(gmdate('Y-m-d H:i:s', (int) $last['at'])) . ' UTC';
+
+        if (! empty($last['url'])) {
+            echo ' — ' . esc_html((string) $last['url']);
+        }
+
+        echo ' — ' . esc_html($labels[$reason] ?? $reason) . '</p>';
     }
 
 }

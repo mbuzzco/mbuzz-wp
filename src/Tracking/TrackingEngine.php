@@ -67,6 +67,23 @@ final class TrackingEngine
      * Record an outcome reached before a FormSource exists (CF7 rejected the
      * submission, or consent was withheld).
      */
+    /** Separate slot: a page view's outcome must not overwrite a submission's. */
+    public const TRANSIENT_LAST_PAGE_VIEW = 'mbuzz_attribution_last_page_view';
+
+    /**
+     * Record why a front-end request was not tracked. A page that mints no
+     * visitor cookie silently drops every submission made on it, so the reason
+     * has to be visible without shell access to a log.
+     */
+    public static function notePageView(string $reason): void
+    {
+        set_transient(
+            self::TRANSIENT_LAST_PAGE_VIEW,
+            ['reason' => $reason, 'url' => $_SERVER['REQUEST_URI'] ?? '', 'at' => time()],
+            DAY_IN_SECONDS
+        );
+    }
+
     public static function note(string $outcome): void
     {
         set_transient(
