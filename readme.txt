@@ -4,7 +4,7 @@ Tags: attribution, analytics, woocommerce, marketing, conversion-tracking
 Requires at least: 6.5
 Tested up to: 6.7
 Requires PHP: 8.1
-Stable tag: 0.5.0-alpha
+Stable tag: 0.6.0-alpha
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -54,6 +54,9 @@ Reporting lives at app.mbuzz.co. This plugin handles capture and configuration
 only.
 
 == Changelog ==
+
+= 0.6.0-alpha =
+* **One form can now send different event names depending on what the visitor did.** Some plugins render a form in more than one mode — an enquiry and a booking, say — and post which mode it was as a hidden field. Give that field the "Event / conversion name" role and list what each of its values should be called, one `posted value = event name` per line. A value you haven't listed falls back to the form's own event name, so a change on the other plugin's side can never silently rename your events.
 
 = 0.5.0-alpha =
 * **Tracking now works on sites behind a full-page cache.** Cloudflare, WP Rocket, Varnish, LiteSpeed and most managed hosts serve pages without running PHP, so nothing established the visitor and every form submission from a cached page was silently discarded. Pages no longer set the visitor cookie at all — a small first-party request does, on a route caches never store. Your identity cookie is still created by the server, stays HttpOnly, and keeps its full two-year life.

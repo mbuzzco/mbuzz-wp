@@ -69,6 +69,14 @@ final class FormMapFields
                 $entry[FieldMap::K_KEY] = $key;
             }
 
+            // event_type takes no mbuzz key, so its box carries the value map instead.
+            if ($role === Roles::EVENT_TYPE) {
+                $values = self::parseValueMap((string) ($config[FieldMap::K_KEY] ?? ''));
+                if ($values !== []) {
+                    $entry[FieldMap::K_VALUES] = $values;
+                }
+            }
+
             $fields[$name] = $entry;
         }
 
@@ -76,6 +84,35 @@ final class FormMapFields
 
         return new FieldMap($enabled, $trackAs, $type, $capture, $fields);
     }
+    /**
+     * Parse the panel's value-map box: one `posted value = event name` per line.
+     *
+     * The seam between a third-party field's vocabulary and ours. Malformed lines
+     * are dropped rather than guessed at — a half-understood mapping silently
+     * renaming events is the failure this exists to prevent.
+     *
+     * @return array<string, string>
+     */
+    private static function parseValueMap(string $raw): array
+    {
+        $values = [];
+
+        foreach (preg_split('/\r\n|\r|\n/', $raw) ?: [] as $line) {
+            if (! str_contains($line, '=')) {
+                continue;
+            }
+
+            [$from, $to] = array_map('trim', explode('=', $line, 2));
+            if ($from === '' || $to === '') {
+                continue;
+            }
+
+            $values[sanitize_text_field($from)] = sanitize_text_field($to);
+        }
+
+        return $values;
+    }
+
     /**
      * Merge the panel's "add a field that isn't listed" row. Lets an admin map
      * an input another plugin injects into the form as raw HTML — submitted with

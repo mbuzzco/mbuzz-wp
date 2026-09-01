@@ -63,16 +63,41 @@ final class Cf7PanelPresenter
                 'role'      => $role,
                 'role_name' => $this->name([FieldMap::K_FIELDS, $field, FieldMap::K_ROLE]),
                 'role_id'   => 'mbuzz-role-' . $index,
-                'key'       => (string) ($config[FieldMap::K_KEY] ?? ''),
+                'key'       => $role === Roles::EVENT_TYPE
+                    ? self::valueMapText($config)
+                    : (string) ($config[FieldMap::K_KEY] ?? ''),
                 'key_name'  => $this->name([FieldMap::K_FIELDS, $field, FieldMap::K_KEY]),
                 'key_id'    => 'mbuzz-key-' . $index,
                 // Only trait/property carry a mbuzz name; user_id/revenue/currency/ignore
                 // don't — the template hides the name input for those.
-                'key_used'  => in_array($role, Roles::KEYED, true),
+                'key_used'  => in_array($role, Roles::KEYED, true) || $role === Roles::EVENT_TYPE,
+                // event_type has no mbuzz name, so it reuses that column for its
+                // value map — a textarea of `posted value = event name` lines.
+                'key_is_map' => $role === Roles::EVENT_TYPE,
             ];
         }
 
         return $rows;
+    }
+
+    /**
+     * Render a stored value map back into the panel's editable text form.
+     *
+     * @param array<string, mixed> $config
+     */
+    private static function valueMapText(array $config): string
+    {
+        $values = $config[FieldMap::K_VALUES] ?? null;
+        if (! is_array($values)) {
+            return '';
+        }
+
+        $lines = [];
+        foreach ($values as $from => $to) {
+            $lines[] = $from . ' = ' . $to;
+        }
+
+        return implode("\n", $lines);
     }
 
     /**

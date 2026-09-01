@@ -205,6 +205,78 @@ class FieldMapTest extends TestCase
         $this->assertSame('submit_enquiry', $hit->type);
     }
 
+    // --- Event type value map (K_VALUES) ---
+    //
+    // A third-party field carries the vendor's own vocabulary (LineLeader posts
+    // `enquiry` / `book_a_tour`). Taking it raw would make that vendor's internal
+    // string our public event name: if they rename it, our events silently rename
+    // too. The map is the seam — known values translate, unknown ones fall back to
+    // the form's own type rather than inventing a name nothing downstream expects.
+
+    public function testEventTypeValueMapTranslatesAKnownValue(): void
+    {
+        $hit = $this->mapWith(
+            ['form_mode' => [
+                FieldMap::K_ROLE   => Roles::EVENT_TYPE,
+                FieldMap::K_VALUES => ['book_a_tour' => 'll_submit_tour'],
+            ]],
+            'll_submit_enquiry'
+        )->resolve(['form_mode' => 'book_a_tour']);
+
+        $this->assertSame('ll_submit_tour', $hit->type);
+    }
+
+    public function testEventTypeValueMapFallsBackForAnUnknownValue(): void
+    {
+        $hit = $this->mapWith(
+            ['form_mode' => [
+                FieldMap::K_ROLE   => Roles::EVENT_TYPE,
+                FieldMap::K_VALUES => ['book_a_tour' => 'll_submit_tour'],
+            ]],
+            'll_submit_enquiry'
+        )->resolve(['form_mode' => 'something_new']);
+
+        $this->assertSame('ll_submit_enquiry', $hit->type);
+    }
+
+    public function testEventTypeWithoutAValueMapStillPassesThroughRaw(): void
+    {
+        $hit = $this->mapWith(
+            ['form_mode' => [FieldMap::K_ROLE => Roles::EVENT_TYPE]],
+            'll_submit_enquiry'
+        )->resolve(['form_mode' => 'book_a_tour']);
+
+        $this->assertSame('book_a_tour', $hit->type);
+    }
+
+    public function testEventTypeValueMapSurvivesSerialization(): void
+    {
+        $map = $this->mapWith(
+            ['form_mode' => [
+                FieldMap::K_ROLE   => Roles::EVENT_TYPE,
+                FieldMap::K_VALUES => ['book_a_tour' => 'll_submit_tour'],
+            ]],
+            'll_submit_enquiry'
+        );
+
+        $hit = FieldMap::fromArray($map->toArray())->resolve(['form_mode' => 'book_a_tour']);
+
+        $this->assertSame('ll_submit_tour', $hit->type);
+    }
+
+    public function testEventTypeValueMapEmitsNoProperty(): void
+    {
+        $hit = $this->mapWith(
+            ['form_mode' => [
+                FieldMap::K_ROLE   => Roles::EVENT_TYPE,
+                FieldMap::K_VALUES => ['book_a_tour' => 'll_submit_tour'],
+            ]],
+            'll_submit_enquiry'
+        )->resolve(['form_mode' => 'book_a_tour']);
+
+        $this->assertSame([], $hit->properties);
+    }
+
     public function testEventTypeFieldEmitsNoProperty(): void
     {
         $hit = $this->mapWith(

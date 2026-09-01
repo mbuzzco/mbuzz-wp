@@ -227,4 +227,38 @@ class MapRoundTripTest extends TestCase
             }
         };
     }
+
+    public function testAnEventTypeValueMapSurvivesTheFullPanelRoundTrip(): void
+    {
+        // Panel input → sanitize → store → re-present → the admin sees it back.
+        $map = FormMapFields::sanitize([
+            FieldMap::K_ENABLED  => '1',
+            FieldMap::K_TRACK_AS => TrackAs::EVENT,
+            FieldMap::K_TYPE     => 'll_submit_enquiry',
+            FieldMap::K_FIELDS   => [
+                'lineleader_form_mode' => [
+                    FieldMap::K_ROLE => Roles::EVENT_TYPE,
+                    FieldMap::K_KEY  => "book_a_tour = ll_submit_tour",
+                ],
+            ],
+        ]);
+
+        $stored = FieldMap::fromArray($map->toArray());
+
+        $this->assertSame('ll_submit_tour', $stored->resolve(['lineleader_form_mode' => 'book_a_tour'])->type);
+        $this->assertSame('ll_submit_enquiry', $stored->resolve(['lineleader_form_mode' => 'enquiry'])->type);
+
+        $rows = (new Cf7PanelPresenter('mbuzz_map'))->present($stored, ['lineleader_form_mode'])['rows'];
+        $row  = null;
+        foreach ($rows as $candidate) {
+            if ($candidate['field'] === 'lineleader_form_mode') {
+                $row = $candidate;
+            }
+        }
+
+        $this->assertNotNull($row);
+        $this->assertTrue($row['key_is_map']);
+        $this->assertTrue($row['key_used'], 'the map box must stay visible');
+        $this->assertSame('book_a_tour = ll_submit_tour', $row['key']);
+    }
 }

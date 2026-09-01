@@ -24,6 +24,7 @@ final class FieldMap
     public const K_FIELDS          = 'fields';
     public const K_ROLE            = 'role';
     public const K_KEY             = 'key';
+    public const K_VALUES          = 'values';
 
     // The panel's "add a field that isn't listed" row (input only, never stored).
     public const K_EXTRA       = 'extra';
@@ -139,7 +140,7 @@ final class FieldMap
                     $currency = self::nonEmptyScalar($value) ?? $currency;
                     break;
                 case Roles::EVENT_TYPE:
-                    $type ??= self::nonEmptyScalar($value);
+                    $type ??= self::eventTypeFrom($value, $config);
                     break;
                 // Roles::IGNORE and anything unrecognized: skipped.
             }
@@ -163,6 +164,38 @@ final class FieldMap
      *
      * @param mixed $value
      */
+    /**
+     * Resolve an event-type field's value, through its value map when it has one.
+     *
+     * A third-party field speaks its own vocabulary — LineLeader's tour widget
+     * posts `enquiry` / `book_a_tour`. Taking that raw would make a vendor's
+     * internal string our public event name, so a rename on their side silently
+     * renames our events with nothing logged. The map is the seam.
+     *
+     * An unmapped value returns null so the caller falls back to the form's own
+     * type: wrong but expected, rather than a name nothing downstream knows.
+     * A field with no map at all keeps passing through raw.
+     *
+     * @param mixed                                  $value
+     * @param array{role?: string, values?: mixed}   $config
+     */
+    private static function eventTypeFrom($value, array $config): ?string
+    {
+        $resolved = self::nonEmptyScalar($value);
+        if ($resolved === null) {
+            return null;
+        }
+
+        $values = $config[self::K_VALUES] ?? null;
+        if (! is_array($values) || $values === []) {
+            return $resolved;
+        }
+
+        $mapped = $values[$resolved] ?? null;
+
+        return is_string($mapped) ? (self::nonEmptyScalar($mapped) ?? null) : null;
+    }
+
     private static function nonEmptyScalar($value): ?string
     {
         foreach ((array) $value as $candidate) {

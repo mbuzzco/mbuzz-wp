@@ -2,6 +2,9 @@
  * CF7 editor panel: show the "mbuzz name" input only for roles that carry one
  * (trait / property), and the "—" placeholder otherwise.
  *
+ * `event_type` is a third case: it takes no mbuzz name, but reuses that column
+ * for its value map, so the box stays visible for it too.
+ *
  * Lives here rather than inline: CF7 6.1+ routes editor panel output through
  * WPCF7_HTMLFormatter::print(), which runs wp_kses() with the admin allowlist.
  * That list has no `script` element, so an inline <script> loses its tags and
@@ -15,6 +18,9 @@
 ( function () {
 	/** Fallback if the attribute is unreadable; mirrors Roles::KEYED. */
 	var KEYED_FALLBACK = [ 'trait', 'property' ];
+
+	/** Takes no mbuzz name, but the column holds its value map. */
+	var MAP_ROLE = 'event_type';
 
 	function keyedRoles( select ) {
 		var raw = select.getAttribute( 'data-keyed-roles' );
@@ -38,7 +44,8 @@
 		}
 		var cell = input.closest ? input.closest( 'td' ) : input.parentNode;
 		var na = cell ? cell.querySelector( '.mbuzz-key-na' ) : null;
-		var used = keyedRoles( select ).indexOf( select.value ) !== -1;
+		var used = keyedRoles( select ).indexOf( select.value ) !== -1
+			|| select.value === MAP_ROLE;
 
 		input.style.display = used ? '' : 'none';
 		if ( na ) {

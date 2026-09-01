@@ -169,4 +169,63 @@ class FormMapFieldsTest extends TestCase
         $this->assertArrayHasKey('LL-Tour_Mode', $map->fields);
     }
 
+
+    // --- Event-type value map ---
+
+    public function testSanitizeParsesAValueMapForAnEventTypeField(): void
+    {
+        $map = FormMapFields::sanitize([
+            FieldMap::K_ENABLED  => '1',
+            FieldMap::K_TRACK_AS => TrackAs::EVENT,
+            FieldMap::K_TYPE     => 'll_submit_enquiry',
+            FieldMap::K_FIELDS   => [
+                'lineleader_form_mode' => [
+                    FieldMap::K_ROLE   => Roles::EVENT_TYPE,
+                    FieldMap::K_KEY    => "book_a_tour = ll_submit_tour\nenquiry = ll_submit_enquiry",
+                ],
+            ],
+        ]);
+
+        $this->assertSame(
+            ['book_a_tour' => 'll_submit_tour', 'enquiry' => 'll_submit_enquiry'],
+            $map->fields['lineleader_form_mode'][FieldMap::K_VALUES] ?? null
+        );
+    }
+
+    public function testSanitizeKeepsAnEventTypeFieldWithNoValueMap(): void
+    {
+        $map = FormMapFields::sanitize([
+            FieldMap::K_ENABLED  => '1',
+            FieldMap::K_TRACK_AS => TrackAs::EVENT,
+            FieldMap::K_TYPE     => 'll_submit_enquiry',
+            FieldMap::K_FIELDS   => [
+                'lineleader_form_mode' => [FieldMap::K_ROLE => Roles::EVENT_TYPE],
+            ],
+        ]);
+
+        $this->assertSame(
+            [FieldMap::K_ROLE => Roles::EVENT_TYPE],
+            $map->fields['lineleader_form_mode'] ?? null
+        );
+    }
+
+    public function testSanitizeIgnoresMalformedValueMapLines(): void
+    {
+        $map = FormMapFields::sanitize([
+            FieldMap::K_ENABLED  => '1',
+            FieldMap::K_TRACK_AS => TrackAs::EVENT,
+            FieldMap::K_TYPE     => 'll_submit_enquiry',
+            FieldMap::K_FIELDS   => [
+                'lineleader_form_mode' => [
+                    FieldMap::K_ROLE => Roles::EVENT_TYPE,
+                    FieldMap::K_KEY  => "book_a_tour = ll_submit_tour\nnonsense\n = orphan\nempty =",
+                ],
+            ],
+        ]);
+
+        $this->assertSame(
+            ['book_a_tour' => 'll_submit_tour'],
+            $map->fields['lineleader_form_mode'][FieldMap::K_VALUES] ?? null
+        );
+    }
 }
