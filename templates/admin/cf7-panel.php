@@ -131,7 +131,7 @@ $role_labels = [
 			<tr>
 				<td>
 					<label class="screen-reader-text" for="mbuzz-extra-field"><?php esc_html_e('Field name', 'mbuzz-attribution'); ?></label>
-					<input type="text" id="mbuzz-extra-field" name="<?php echo esc_attr($extra_field_name); ?>" value="" class="regular-text" placeholder="<?php echo esc_attr__('e.g. lineleader_form_mode', 'mbuzz-attribution'); ?>">
+					<input type="text" id="mbuzz-extra-field" name="<?php echo esc_attr($extra_field_name); ?>" value="" class="regular-text" placeholder="<?php echo esc_attr__('e.g. form_mode', 'mbuzz-attribution'); ?>">
 				</td>
 				<td>
 					<label class="screen-reader-text" for="mbuzz-extra-role"><?php esc_html_e('Role', 'mbuzz-attribution'); ?></label>
