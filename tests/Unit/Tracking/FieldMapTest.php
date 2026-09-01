@@ -178,39 +178,39 @@ class FieldMapTest extends TestCase
     public function testEventTypeFieldOverridesTheMapType(): void
     {
         $hit = $this->mapWith(
-            ['lineleader_form_mode' => [FieldMap::K_ROLE => Roles::EVENT_TYPE]],
-            'll_submit_enquiry'
-        )->resolve(['lineleader_form_mode' => 'll_submit_tour']);
+            ['form_mode' => [FieldMap::K_ROLE => Roles::EVENT_TYPE]],
+            'submit_enquiry'
+        )->resolve(['form_mode' => 'submit_tour']);
 
-        $this->assertSame('ll_submit_tour', $hit->type);
+        $this->assertSame('submit_tour', $hit->type);
     }
 
     public function testEventTypeFieldFallsBackWhenAbsent(): void
     {
         $hit = $this->mapWith(
-            ['lineleader_form_mode' => [FieldMap::K_ROLE => Roles::EVENT_TYPE]],
-            'll_submit_enquiry'
+            ['form_mode' => [FieldMap::K_ROLE => Roles::EVENT_TYPE]],
+            'submit_enquiry'
         )->resolve([]);
 
-        $this->assertSame('ll_submit_enquiry', $hit->type);
+        $this->assertSame('submit_enquiry', $hit->type);
     }
 
     public function testEventTypeFieldFallsBackWhenBlank(): void
     {
         $hit = $this->mapWith(
-            ['lineleader_form_mode' => [FieldMap::K_ROLE => Roles::EVENT_TYPE]],
-            'll_submit_enquiry'
-        )->resolve(['lineleader_form_mode' => '   ']);
+            ['form_mode' => [FieldMap::K_ROLE => Roles::EVENT_TYPE]],
+            'submit_enquiry'
+        )->resolve(['form_mode' => '   ']);
 
-        $this->assertSame('ll_submit_enquiry', $hit->type);
+        $this->assertSame('submit_enquiry', $hit->type);
     }
 
     public function testEventTypeFieldEmitsNoProperty(): void
     {
         $hit = $this->mapWith(
-            ['lineleader_form_mode' => [FieldMap::K_ROLE => Roles::EVENT_TYPE]],
-            'll_submit_enquiry'
-        )->resolve(['lineleader_form_mode' => 'll_submit_tour']);
+            ['form_mode' => [FieldMap::K_ROLE => Roles::EVENT_TYPE]],
+            'submit_enquiry'
+        )->resolve(['form_mode' => 'submit_tour']);
 
         $this->assertSame([], $hit->properties);
     }

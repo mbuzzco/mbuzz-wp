@@ -82,7 +82,7 @@ class Cf7PanelTemplateTest extends TestCase
         $map = FieldMap::fromArray([
             FieldMap::K_ENABLED  => true,
             FieldMap::K_TRACK_AS => TrackAs::EVENT,
-            FieldMap::K_TYPE     => 'll_submit_enquiry',
+            FieldMap::K_TYPE     => 'submit_enquiry',
             FieldMap::K_FIELDS   => [
                 'Location'      => [FieldMap::K_ROLE => Roles::PROPERTY, FieldMap::K_KEY => 'location'],
                 'GuardianEmail' => [FieldMap::K_ROLE => Roles::USER_ID],

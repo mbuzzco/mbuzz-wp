@@ -116,16 +116,16 @@ class FormMapFieldsTest extends TestCase
         $map = FormMapFields::sanitize([
             FieldMap::K_ENABLED  => '1',
             FieldMap::K_TRACK_AS => TrackAs::EVENT,
-            FieldMap::K_TYPE     => 'll_submit_enquiry',
+            FieldMap::K_TYPE     => 'submit_enquiry',
             FieldMap::K_EXTRA    => [
-                FieldMap::K_EXTRA_FIELD => 'lineleader_form_mode',
+                FieldMap::K_EXTRA_FIELD => 'form_mode',
                 FieldMap::K_ROLE        => Roles::EVENT_TYPE,
             ],
         ]);
 
         $this->assertSame(
             [Roles::EVENT_TYPE],
-            [$map->fields['lineleader_form_mode'][FieldMap::K_ROLE]]
+            [$map->fields['form_mode'][FieldMap::K_ROLE]]
         );
     }
 

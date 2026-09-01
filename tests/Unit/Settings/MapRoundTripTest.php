@@ -81,7 +81,7 @@ class MapRoundTripTest extends TestCase
             // must not quietly rewrite what the admin saved.
             'group-1'             => [FieldMap::K_ROLE => Roles::PROPERTY, FieldMap::K_KEY => 'group_1'],
             // Injected by another plugin: never a CF7 tag, but posted with the form.
-            'lineleader_form_mode' => [FieldMap::K_ROLE => Roles::EVENT_TYPE],
+            'form_mode'           => [FieldMap::K_ROLE => Roles::EVENT_TYPE],
         ];
     }
 

@@ -93,12 +93,12 @@ class Cf7PanelPresenterTest extends TestCase
         // Injected by another plugin as raw HTML: absent from scan_form_tags(),
         // present in the posted data. A saved mapping must not vanish.
         $map = $this->map([
-            'lineleader_form_mode' => [FieldMap::K_ROLE => Roles::EVENT_TYPE],
+            'form_mode' => [FieldMap::K_ROLE => Roles::EVENT_TYPE],
         ]);
 
         $fields = array_column($this->present($map, ['GuardianEmail'])['rows'], 'field');
 
-        $this->assertSame(['GuardianEmail', 'lineleader_form_mode'], $fields);
+        $this->assertSame(['GuardianEmail', 'form_mode'], $fields);
     }
 
     public function testDoesNotDuplicateAFieldThatIsAlsoATag(): void
