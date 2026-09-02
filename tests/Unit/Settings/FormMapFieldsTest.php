@@ -129,6 +129,49 @@ class FormMapFieldsTest extends TestCase
         );
     }
 
+    /**
+     * The BSA case: `lineleader_form_mode` is injected as raw HTML, not a CF7
+     * tag, so it is only reachable through the extra row — and it is exactly
+     * the field that needs a value map. Without this, the map is dropped on the
+     * first save and the event fires under the vendor's own vocabulary.
+     */
+    public function testExtraEventTypeRowCarriesItsValueMap(): void
+    {
+        $map = FormMapFields::sanitize([
+            FieldMap::K_ENABLED  => '1',
+            FieldMap::K_TRACK_AS => TrackAs::EVENT,
+            FieldMap::K_TYPE     => 'll_submit_enquiry',
+            FieldMap::K_EXTRA    => [
+                FieldMap::K_EXTRA_FIELD => 'lineleader_form_mode',
+                FieldMap::K_ROLE        => Roles::EVENT_TYPE,
+                FieldMap::K_KEY         => "book_a_tour = ll_submit_tour\nenquiry = ll_submit_enquiry",
+            ],
+        ]);
+
+        $this->assertSame(
+            ['book_a_tour' => 'll_submit_tour', 'enquiry' => 'll_submit_enquiry'],
+            $map->fields['lineleader_form_mode'][FieldMap::K_VALUES] ?? null
+        );
+    }
+
+    public function testExtraEventTypeRowWithoutAValueMapStillMaps(): void
+    {
+        $map = FormMapFields::sanitize([
+            FieldMap::K_ENABLED  => '1',
+            FieldMap::K_TRACK_AS => TrackAs::EVENT,
+            FieldMap::K_TYPE     => 'll_submit_enquiry',
+            FieldMap::K_EXTRA    => [
+                FieldMap::K_EXTRA_FIELD => 'lineleader_form_mode',
+                FieldMap::K_ROLE        => Roles::EVENT_TYPE,
+            ],
+        ]);
+
+        $this->assertSame(
+            [FieldMap::K_ROLE => Roles::EVENT_TYPE],
+            $map->fields['lineleader_form_mode'] ?? null
+        );
+    }
+
     public function testIgnoresAnExtraRowWithNoFieldName(): void
     {
         $map = FormMapFields::sanitize([

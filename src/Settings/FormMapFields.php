@@ -59,22 +59,9 @@ final class FormMapFields
                 $role = Roles::IGNORE;
             }
 
-            $entry = [FieldMap::K_ROLE => $role];
-
-            if (in_array($role, Roles::KEYED, true)) {
-                $key = sanitize_key((string) ($config[FieldMap::K_KEY] ?? ''));
-                if ($key === '') {
-                    continue; // a trait/property with no mbuzz key is meaningless
-                }
-                $entry[FieldMap::K_KEY] = $key;
-            }
-
-            // event_type takes no mbuzz key, so its box carries the value map instead.
-            if ($role === Roles::EVENT_TYPE) {
-                $values = self::parseValueMap((string) ($config[FieldMap::K_KEY] ?? ''));
-                if ($values !== []) {
-                    $entry[FieldMap::K_VALUES] = $values;
-                }
+            $entry = self::entryFor($role, (string) ($config[FieldMap::K_KEY] ?? ''));
+            if ($entry === null) {
+                continue; // a trait/property with no mbuzz key is meaningless
             }
 
             $fields[$name] = $entry;
@@ -84,6 +71,39 @@ final class FormMapFields
 
         return new FieldMap($enabled, $trackAs, $type, $capture, $fields);
     }
+    /**
+     * Build one field's stored entry from its role and the single box the panel
+     * gives that row. The box means different things per role — a mbuzz key for
+     * trait/property, a value map for event_type, nothing for the rest — so the
+     * reading of it belongs in one place. Both the scanned rows and the
+     * "add a field that isn't listed" row come through here; when they didn't,
+     * an event_type value map typed into the extra row was silently dropped.
+     *
+     * @return array<string, mixed>|null null when the role requires a key and none was given
+     */
+    private static function entryFor(string $role, string $box): ?array
+    {
+        $entry = [FieldMap::K_ROLE => $role];
+
+        if (in_array($role, Roles::KEYED, true)) {
+            $key = sanitize_key($box);
+            if ($key === '') {
+                return null;
+            }
+            $entry[FieldMap::K_KEY] = $key;
+        }
+
+        // event_type takes no mbuzz key, so its box carries the value map instead.
+        if ($role === Roles::EVENT_TYPE) {
+            $values = self::parseValueMap($box);
+            if ($values !== []) {
+                $entry[FieldMap::K_VALUES] = $values;
+            }
+        }
+
+        return $entry;
+    }
+
     /**
      * Parse the panel's value-map box: one `posted value = event name` per line.
      *
@@ -135,14 +155,9 @@ final class FormMapFields
             return $fields;
         }
 
-        $entry = [FieldMap::K_ROLE => $role];
-
-        if (in_array($role, Roles::KEYED, true)) {
-            $key = sanitize_key((string) ($extra[FieldMap::K_KEY] ?? ''));
-            if ($key === '') {
-                return $fields;
-            }
-            $entry[FieldMap::K_KEY] = $key;
+        $entry = self::entryFor($role, (string) ($extra[FieldMap::K_KEY] ?? ''));
+        if ($entry === null) {
+            return $fields;
         }
 
         $fields[$name] = $entry;
