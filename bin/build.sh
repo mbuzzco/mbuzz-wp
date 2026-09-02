@@ -55,7 +55,6 @@ for needed in \
   "$SLUG/vendor/autoload.php" \
   "$SLUG/assets/js/mbuzz-capture.js" \
   "$SLUG/assets/admin/cf7-panel.js" \
-  "$SLUG/assets/js/mbuzz-session.js" \
   "$SLUG/readme.txt"; do
   if ! grep -qF " $needed" <<<"$listing"; then fail "missing from zip: $needed"; fi
 done

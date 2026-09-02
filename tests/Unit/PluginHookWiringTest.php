@@ -50,9 +50,15 @@ class PluginHookWiringTest extends TestCase
 
     public function testEveryRegisteredHookCallbackIsCallable(): void
     {
-        // Fresh registration run (register() is idempotent-guarded, so use a
-        // dedicated instance reflection-free path: the singleton's register()).
-        Plugin::instance()->register();
+        // register() is idempotent-guarded on a singleton that outlives the
+        // test, so any earlier test that registered leaves this one observing
+        // nothing. Reset the guard so the pass is genuinely re-run here.
+        $plugin = Plugin::instance();
+        $guard  = new \ReflectionProperty($plugin, 'registered');
+        $guard->setAccessible(true);
+        $guard->setValue($plugin, false);
+
+        $plugin->register();
 
         $this->assertNotEmpty($this->callbacks, 'register() should wire hooks');
 

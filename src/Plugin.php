@@ -40,6 +40,24 @@ final class Plugin
     public const SKIP_NO_CONSENT   = 'page_no_consent';
     private bool $sdkReady = false;
 
+    /** Identifies the inline session bootstrap to optimisers and to Diagnostics. */
+    public const SESSION_HANDLE = 'mbuzz-session';
+
+    /**
+     * Every mainstream optimiser's "leave this script alone" filter. They take
+     * either an array or a comma-joined string; the callback handles both.
+     *
+     * @var array<int, string>
+     */
+    private const OPTIMISER_EXCLUSION_FILTERS = [
+        'rocket_delay_js_exclusions',
+        'rocket_exclude_defer_js',
+        'rocket_minify_excluded_external_js',
+        'litespeed_optm_js_defer_exc',
+        'sgo_javascript_combine_excluded_inline_content',
+        'autoptimize_filter_js_exclude',
+    ];
+
     public static function instance(): self
     {
         if (self::$instance === null) {
@@ -91,6 +109,12 @@ final class Plugin
         LeadController::register();
         SessionController::register();
         add_action('wp_enqueue_scripts', [$this, 'enqueueCaptureHelper']);
+
+        // The session bootstrap is printed inline, as early in <head> as we can
+        // get, and told to every JS optimiser to leave it alone. See
+        // printSessionBootstrap() for why an enqueued file cannot be trusted.
+        add_action('wp_head', [$this, 'printSessionBootstrap'], 0);
+        $this->registerOptimiserExclusions();
     }
 
     /**
@@ -113,19 +137,81 @@ final class Plugin
         wp_localize_script('mbuzz-capture', 'mbuzzCapture', [
             'endpoint' => esc_url_raw(rest_url(LeadController::NAMESPACE . LeadController::ROUTE)),
         ]);
+    }
 
-        // Session bootstrap. A cached page never ran PHP, so this is the only
-        // thing that can establish the visitor — and it does so server-side.
-        wp_enqueue_script(
-            'mbuzz-session',
-            MBUZZ_ATTRIBUTION_URL . 'assets/js/mbuzz-session.js',
-            [],
-            MBUZZ_ATTRIBUTION_VERSION,
-            true
+    /**
+     * Print the session bootstrap inline in <head>.
+     *
+     * A cached page never ran PHP, so this is the only thing that establishes
+     * the visitor — and it must run on load, because a visitor whose first act
+     * is the form submit never triggers a delayed script.
+     *
+     * It is inline rather than enqueued because every mainstream JS optimiser
+     * defers enqueued files by default. Measured on a live WP Rocket site: the
+     * enqueued build was rewritten to `type="text/rocketlazyloadscript"`, an
+     * inert type the browser never executes, giving 0 endpoint calls on load
+     * and 1 after a click. Inline script in the head is the only form none of
+     * them can postpone — belt (these attributes) and braces (the exclusion
+     * filters registered below).
+     *
+     * The visitor id is never created, read, or held here: the server sets it
+     * HttpOnly on the response, which is what preserves its full lifetime under
+     * Safari's ITP.
+     */
+    public function printSessionBootstrap(): void
+    {
+        if (! $this->sdkReady() || $this->shouldSkipForAdmin()) {
+            return;
+        }
+
+        $endpoint = esc_url_raw(rest_url(SessionController::NAMESPACE . SessionController::ROUTE));
+
+        printf(
+            '<script id="%s" data-cfasync="false" data-no-optimize="1" data-no-defer="1" '
+                . 'data-no-minify="1" data-pagespeed-no-defer>%s</script>' . "\n",
+            esc_attr(self::SESSION_HANDLE),
+            self::sessionBootstrapJs($endpoint)
         );
-        wp_localize_script('mbuzz-session', 'mbuzzSession', [
-            'endpoint' => esc_url_raw(rest_url(SessionController::NAMESPACE . SessionController::ROUTE)),
-        ]);
+    }
+
+    /**
+     * The bootstrap itself: post where the visitor is, let the server set the
+     * cookie. Fire-and-forget — never blocks render, never throws into the host
+     * page. Kept deliberately small; it is inlined into every page.
+     */
+    private static function sessionBootstrapJs(string $endpoint): string
+    {
+        return 'try{fetch(' . wp_json_encode($endpoint) . ',{method:"POST",'
+            . 'headers:{"Content-Type":"application/json"},'
+            . 'body:JSON.stringify({url:location.href,referrer:document.referrer||""}),'
+            . 'credentials:"same-origin",keepalive:true}).catch(function(){})}catch(e){}';
+    }
+
+    /**
+     * Tell every JS optimiser to leave the bootstrap alone.
+     *
+     * The inline attributes above are advisory and each optimiser honours a
+     * different subset, so the plugin asserts it through their filters too
+     * rather than trusting the host's configuration. Existing entries are
+     * always preserved — another plugin's exclusions are not ours to drop.
+     */
+    private function registerOptimiserExclusions(): void
+    {
+        $append = static function ($excluded) {
+            if (is_array($excluded)) {
+                $excluded[] = self::SESSION_HANDLE;
+
+                return $excluded;
+            }
+
+            $existing = (string) $excluded;
+
+            return $existing === '' ? self::SESSION_HANDLE : $existing . ',' . self::SESSION_HANDLE;
+        };
+
+        foreach (self::OPTIMISER_EXCLUSION_FILTERS as $hook) {
+            add_filter($hook, $append);
+        }
     }
 
     public function sdkReady(): bool
