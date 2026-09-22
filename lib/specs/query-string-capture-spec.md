@@ -2,7 +2,7 @@
 
 **Date:** 2026-09-22
 **Priority:** P0 — every paid click on every cached WordPress site is lost
-**Status:** In Progress — fixed and proven (harness RED → GREEN, 2026-09-22); not yet released
+**Status:** In Progress — released as `v0.7.1-alpha` (2026-09-22); not yet installed on BSA
 **Repo:** `mbuzz-wp`. Format follows `mbuzz/lib/specs/GUIDE.md`.
 **Related:** `mbuzz/lib/specs/capi_deployment_spec.md` §3 (where this was found);
 `mbuzz/lib/specs/old/page_cache_attribution_rollout_spec.md` (the path that introduced it).
@@ -138,9 +138,9 @@ No UI. No mockup.
 
 ### Phase 3 — Ship
 
-- [ ] **3.1** Version bump (patch on 0.7.x) + `readme.txt` changelog
-- [ ] **3.2** wp-env pre-ship gate
-- [ ] **3.3** `bin/build.sh` → GitHub Release → verify the asset
+- [x] **3.1** `0.7.1-alpha` (`6a1bf3f`): header, `MBUZZ_ATTRIBUTION_VERSION`, `Stable tag`, changelog
+- [x] **3.2** wp-env pre-ship gate: active at 0.7.1-alpha, `sk_test_` key, logged-out pages 200, no critical error, session beacon present; the debug log shows the harness session accepted by the API as `paid_social`
+- [x] **3.3** `bin/build.sh` → `mbuzz-attribution-0.7.1-alpha.zip` (116K, 100 files, no tests/specs). Published as pre-release `v0.7.1-alpha`; downloaded back — sha256 `433307a7…4242` matches the build. (`gh release create --target` needs the full SHA; a short one is a 422.) SDK still unscoped, same as every prior release — php-scoper is not built yet
 - [ ] **3.4** Vlad/agency uploads to BSA; controlled visit confirms; resume `capi_deployment_spec.md` S5
 
 ### Phase 4 — Docs
