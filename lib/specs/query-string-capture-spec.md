@@ -2,7 +2,7 @@
 
 **Date:** 2026-09-22
 **Priority:** P0 — every paid click on every cached WordPress site is lost
-**Status:** In Progress — released as `v0.7.1-alpha` (2026-09-22); not yet installed on BSA
+**Status:** Shipped — `v0.7.1-alpha` installed on BSA 2026-09-22 14:41 AEST and confirmed in production. Phase 4 docs outstanding
 **Repo:** `mbuzz-wp`. Format follows `mbuzz/lib/specs/GUIDE.md`.
 **Related:** `mbuzz/lib/specs/capi_deployment_spec.md` §3 (where this was found);
 `mbuzz/lib/specs/old/page_cache_attribution_rollout_spec.md` (the path that introduced it).
@@ -109,15 +109,15 @@ No UI. No mockup.
 
 ## Acceptance Criteria
 
-- [ ] Every row of **All States** holds (`RequestUriTest`)
-- [ ] During `recordSession()`, `Mbuzz::initFromRequest()` sees `REQUEST_URI` with the query (`SessionControllerTest`)
-- [ ] `REQUEST_URI` is restored after the call, as today
-- [ ] **Harness RED on the current plugin:** a cached page loaded with `?fbclid=<token>&utm_source=facebook&utm_medium=paid_social` produces a session with **no** `fbclid` and no UTM
-- [ ] **Harness GREEN after the fix:** the same session carries `click_ids.fbclid == <token>` and `utm_source == facebook`
-- [ ] Existing `page-cache.sh` checks still pass (visitor minted, distinct ids, stripped Set-Cookie)
-- [ ] wp-env pre-ship gate: plugin active, logged-out front-end page with an API key → HTTP 200, no critical error
-- [ ] Release zip built with `bin/build.sh`, attached to a GitHub Release, downloaded back and its version checked
-- [ ] **On BSA after upgrade:** a controlled visit with `?fbclid=…` yields a session with the click ID, and `paid_social` sessions per day move from ~2 toward the ad volume
+- [x] Every row of **All States** holds (`RequestUriTest`)
+- [x] During `recordSession()`, `Mbuzz::initFromRequest()` sees `REQUEST_URI` with the query (`SessionControllerTest`)
+- [x] `REQUEST_URI` is restored after the call, as today
+- [x] **Harness RED on the current plugin:** a cached page loaded with `?fbclid=<token>&utm_source=facebook&utm_medium=paid_social` produces a session with **no** `fbclid` and no UTM
+- [x] **Harness GREEN after the fix:** the same session carries `click_ids.fbclid == <token>` and `utm_source == facebook`
+- [x] Existing `page-cache.sh` checks still pass (visitor minted, distinct ids, stripped Set-Cookie)
+- [x] wp-env pre-ship gate: plugin active, logged-out front-end page with an API key → HTTP 200, no critical error
+- [x] Release zip built with `bin/build.sh`, attached to a GitHub Release, downloaded back and its version checked
+- [x] **On BSA after upgrade:** a controlled visit with `?fbclid=…` yields a session with the click ID, and `paid_social` sessions per day move from ~2 toward the ad volume
 
 ---
 
@@ -141,7 +141,7 @@ No UI. No mockup.
 - [x] **3.1** `0.7.1-alpha` (`6a1bf3f`): header, `MBUZZ_ATTRIBUTION_VERSION`, `Stable tag`, changelog
 - [x] **3.2** wp-env pre-ship gate: active at 0.7.1-alpha, `sk_test_` key, logged-out pages 200, no critical error, session beacon present; the debug log shows the harness session accepted by the API as `paid_social`
 - [x] **3.3** `bin/build.sh` → `mbuzz-attribution-0.7.1-alpha.zip` (116K, 100 files, no tests/specs). Published as pre-release `v0.7.1-alpha`; downloaded back — sha256 `433307a7…4242` matches the build. (`gh release create --target` needs the full SHA; a short one is a 422.) SDK still unscoped, same as every prior release — php-scoper is not built yet
-- [ ] **3.4** Vlad/agency uploads to BSA; controlled visit confirms; resume `capi_deployment_spec.md` S5
+- [x] **3.4** Vlad uploaded to BSA (0.7.0-alpha → 0.7.1-alpha, 14:41 AEST). Logged-out pages 200, no critical error, beacon present. **Controlled visit `?fbclid=MBZFIX20260922` → `sess_d10r…` `paid_social`, `fbclid` and all three UTMs kept** (the same visit at 13:55 was `direct`, empty). **First ~19 minutes of real traffic: 22 sessions — 15 `paid_social` with `fbclid`, 3 `paid_search`**, against ~2 `paid_social` a day before
 
 ### Phase 4 — Docs
 
