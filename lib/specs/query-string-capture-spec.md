@@ -2,7 +2,11 @@
 
 **Date:** 2026-09-22
 **Priority:** P0 — every paid click on every cached WordPress site is lost
-**Status:** Shipped — `v0.7.1-alpha` installed on BSA 2026-09-22 14:41 AEST and confirmed in production. Phase 4 docs outstanding
+**Status:** Shipped — `v0.7.1-alpha` installed on BSA 2026-09-22 14:41 AEST and confirmed in production.
+**Next:** Phase 4 docs only (4.1–4.3 below), then move this spec to `lib/specs/old/`. Nothing else is
+owed. The harness (`tests/Integration/page-cache.sh`, 9 checks) needs wp-env running and an `sk_test_`
+key in `.wp-env.override.json`; it reads sessions back from production over SSH (`MBUZZ_SESSION_LOOKUP`
+overrides). wp-env was left running on :8888 at the end of 09-22 — `npx @wordpress/env stop` when done.
 **Repo:** `mbuzz-wp`. Format follows `mbuzz/lib/specs/GUIDE.md`.
 **Related:** `mbuzz/lib/specs/capi_deployment_spec.md` §3 (where this was found);
 `mbuzz/lib/specs/old/page_cache_attribution_rollout_spec.md` (the path that introduced it).
