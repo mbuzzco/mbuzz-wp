@@ -4,7 +4,7 @@ Tags: attribution, analytics, woocommerce, marketing, conversion-tracking
 Requires at least: 6.5
 Tested up to: 6.7
 Requires PHP: 8.1
-Stable tag: 0.7.0-alpha
+Stable tag: 0.7.1-alpha
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -54,6 +54,9 @@ Reporting lives at app.mbuzz.co. This plugin handles capture and configuration
 only.
 
 == Changelog ==
+
+= 0.7.1-alpha =
+* **Ad click IDs and UTM tags are now kept on cached pages.** The visit a cached page records now carries the page's full address, including the query string, so `fbclid`, `gclid` and `utm_*` reach mbuzz and paid visits are attributed to the ads that brought them.
 
 = 0.7.0-alpha =
 * **Tracking now survives a JavaScript optimiser.** Plugins that speed up your site — WP Rocket, LiteSpeed, SG Optimizer, Autoptimize — delay scripts until a visitor first clicks something. Ours was being delayed too, so a visitor who landed on a page and went straight to the form was never recognised, and their submission could not be attributed to the ad or search that brought them. The part that establishes the visitor now runs immediately and asks each of those plugins to leave it alone.
