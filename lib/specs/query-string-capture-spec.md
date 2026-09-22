@@ -158,6 +158,9 @@ No UI. No mockup.
 | All States | `tests/Unit/Tracking/RequestUriTest.php` | path + query, fragment, blanks, encoding |
 | Handoff | `tests/Unit/Rest/SessionControllerTest.php` | the SDK sees the query; `$_SERVER` restored |
 | End to end | `tests/Integration/page-cache.sh` | real WordPress, real cache, real SDK wire → session carries the click ID |
+| **Cached page, real browser** | `page-cache.sh` Mode 3 | a cache whose key **ignores the query** (Cloudflare "Ignore Query String") serves the stored page for `/?fbclid=…`; headless Chrome runs the page's own inline script; the session carries the click. RED on the pre-fix controller, GREEN on the fix (added 2026-09-22 at Vlad's request) |
+
+**Harness defect found while adding Mode 3:** the proxy sent `Host: localhost:8899`, so WordPress answered every proxied page with a canonical 301 to `:8888` — the cache had been storing redirects, not pages, since the harness was written. A redirect cached for the bare URL then replayed to `?fbclid=` visits without the query. The proxy now sends the site's own host, as a real CDN does. The earlier modes still held (they test the endpoint), but "a cache HIT serves HTML" is only now literally true.
 | Production | controlled visit on BSA | the click ID survives on the live site |
 
 ---

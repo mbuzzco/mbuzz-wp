@@ -53,6 +53,13 @@ start_proxy() {
   local strip=""
   if [ "$mode" = "strip" ]; then strip="proxy_hide_header Set-Cookie;"; fi
 
+  # noquery: a cache whose key ignores the query string (Cloudflare "Ignore
+  # Query String", or a cache-key rule dropping tracking params). One stored
+  # file answers every ?fbclid= variant — the worst case for click capture,
+  # because nothing server-side ever sees the parameter.
+  local key='$scheme$request_method$host$request_uri'
+  if [ "$mode" = "noquery" ]; then key='$scheme$request_method$host$uri'; fi
+
   cat > "$conf" <<CONF
 proxy_cache_path /tmp/nc levels=1:2 keys_zone=z:10m inactive=60m;
 server {
@@ -69,10 +76,14 @@ server {
 
   location / {
     proxy_pass http://host.docker.internal:8888;
-    proxy_set_header Host \$host:${PROXY_PORT};
+    # The site's own host, as a real CDN sends it. With the proxy's host
+    # WordPress answers every page with a canonical 301 to :8888 — so the
+    # cache stored redirects, not pages, and a redirect cached for the bare
+    # URL replayed to ?fbclid= visits dropped the query (found 2026-09-22).
+    proxy_set_header Host localhost:8888;
     proxy_cache z;
     proxy_cache_valid any 10m;
-    proxy_cache_key "\$scheme\$request_method\$host\$request_uri";
+    proxy_cache_key "${key}";
     # A full-page cache ignores the origin's cookie/no-cache signals — that is
     # exactly what "Cache Everything" does, and what makes this bug possible.
     # "Cache Everything" caches regardless of what the origin says — including
@@ -199,6 +210,52 @@ elif [ "${found%% *}" = "SESSION" ]; then
   bad "the session reached the API without the query string (${found#SESSION }) — every paid click is lost"
 else
   bad "no session reached the API for this visitor (${found:-no reply from the reader})"
+fi
+
+echo
+info "Mode 3: an ad click lands on a cached page, in a real browser"
+#
+# What happens on BSA: Cloudflare serves the centre page as a stored file, PHP
+# never runs, and the only thing that can record the visit is the inline
+# script in that file — reading location.href in the visitor's browser. The
+# scenario above posts the endpoint directly; this one loads the cached page
+# and lets the page's own script do it.
+#
+# The cache key ignores the query, so the file served was stored for the bare
+# URL: nothing on the server ever sees ?fbclid. If the click survives this,
+# it survives any cache configuration.
+chrome="${CHROME:-/Applications/Google Chrome.app/Contents/MacOS/Google Chrome}"
+if [ ! -x "$chrome" ]; then
+  bad "no headless Chrome at \$CHROME — cannot run the page's script"
+else
+  start_proxy noquery
+  curl -s -o /dev/null "$PROXY_URL/"                     # store the bare page
+  cached_token="MBZCACHED$(date +%s)"
+  ad_landing="$PROXY_URL/?fbclid=${cached_token}&utm_source=facebook&utm_medium=paid_social"
+  status="$(cache_status_of "$ad_landing")"
+  [ "$status" = "HIT" ] && ok "the ad landing is served from cache without PHP (key ignores the query)" \
+                        || bad "expected a cache HIT for the ad landing, got '${status:-none}' — not exercising the case"
+
+  # A real desktop UA: headless Chrome's own says HeadlessChrome, which the API
+  # discards as a bot. --virtual-time-budget lets the inline fetch complete.
+  # A throwaway profile so no earlier visitor cookie is reused; a mock keychain
+  # because a fresh macOS profile otherwise blocks on keychain setup; and a hard
+  # 30s limit (no `timeout` on macOS) so a stuck browser fails the check
+  # instead of hanging the harness.
+  perl -e 'alarm shift; exec @ARGV' 30 \
+    "$chrome" --headless=new --disable-gpu --no-first-run --no-default-browser-check \
+    --use-mock-keychain --user-data-dir="$(mktemp -d)" \
+    --user-agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36" \
+    --virtual-time-budget=5000 --dump-dom "$ad_landing" >/dev/null 2>&1
+  sleep 5
+
+  by_token='s = Session.where("click_ids ->> ? = ?", "fbclid", ARGV[0]).order(:started_at).last; puts(s ? "SESSION fbclid=#{s.click_ids.to_h["fbclid"]} utm_source=#{s.initial_utm.to_h["utm_source"]}" : "NONE")'
+  cached_found="$($lookup "docker exec \$(docker ps --format '{{.Names}}' | grep multibuzz-web | head -1) bin/rails runner '$by_token' $cached_token" 2>/dev/null | grep -E '^(SESSION|NONE)')"
+  if [ "$cached_found" = "SESSION fbclid=${cached_token} utm_source=facebook" ]; then
+    ok "the cached page's own script recorded the ad click (fbclid + utm_source)"
+  else
+    bad "the ad click on a cached page was not recorded (${cached_found:-no reply from the reader})"
+  fi
 fi
 
 echo
