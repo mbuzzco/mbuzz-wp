@@ -55,7 +55,7 @@ class SessionControllerTest extends TestCase
         SessionController::setReinitialiserForTests(null);
         Mbuzz::reset();
         Monkey\tearDown();
-        unset($_COOKIE[CookieManager::VISITOR_COOKIE]);
+        unset($_COOKIE[CookieManager::VISITOR_COOKIE], $_SERVER['HTTP_HOST'], $_SERVER['HTTPS']);
     }
 
     public function testMintsAVisitorCookieWhenThePageCouldNotSetOne(): void
@@ -76,6 +76,37 @@ class SessionControllerTest extends TestCase
         SessionController::handle($this->request(['url' => 'https://example.com/centres/beresfield/']));
 
         $this->assertNotSame([], $this->sessionCalls(), 'No session was recorded.');
+    }
+
+    /**
+     * Where every ad click lives. The session used to be recorded under the
+     * page's path alone, so fbclid, gclid and utm_* never reached mbuzz and
+     * every paid visit to a cached page arrived as organic, social or direct.
+     */
+    public function testTheSessionKeepsTheLandingPagesQueryString(): void
+    {
+        $_SERVER['HTTP_HOST'] = 'example.com';
+        $_SERVER['HTTPS']     = 'on';
+        $this->arrange();
+
+        SessionController::handle($this->request([
+            'url' => 'https://example.com/centres/beresfield/?fbclid=AB&utm_source=facebook#enquire',
+        ]));
+
+        $this->assertSame(
+            'https://example.com/centres/beresfield/?fbclid=AB&utm_source=facebook',
+            $this->sessionCalls()[0]['payload']['session']['url'] ?? null
+        );
+    }
+
+    public function testRestoresTheRequestUriOfTheRestCallAfterward(): void
+    {
+        $_SERVER['REQUEST_URI'] = '/wp-json/mbuzz/v1/session';
+        $this->arrange();
+
+        SessionController::handle($this->request(['url' => 'https://example.com/x/?gclid=G1']));
+
+        $this->assertSame('/wp-json/mbuzz/v1/session', $_SERVER['REQUEST_URI']);
     }
 
     public function testReusesAnExistingVisitorRatherThanChurningANewId(): void

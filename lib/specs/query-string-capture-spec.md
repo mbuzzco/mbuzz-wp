@@ -2,7 +2,7 @@
 
 **Date:** 2026-09-22
 **Priority:** P0 — every paid click on every cached WordPress site is lost
-**Status:** Ready
+**Status:** In Progress — fixed and proven (harness RED → GREEN, 2026-09-22); not yet released
 **Repo:** `mbuzz-wp`. Format follows `mbuzz/lib/specs/GUIDE.md`.
 **Related:** `mbuzz/lib/specs/capi_deployment_spec.md` §3 (where this was found);
 `mbuzz/lib/specs/old/page_cache_attribution_rollout_spec.md` (the path that introduced it).
@@ -125,16 +125,16 @@ No UI. No mockup.
 
 ### Phase 1 — Harness first (RED)
 
-- [ ] **1.1** Test-only mu-plugin under `tests/Integration/` that points the SDK at a local API for `sk_test_` keys; wire it into wp-env via `.wp-env.override.json` (gitignored)
-- [ ] **1.2** `page-cache.sh`: add the click-ID scenario; read the session back from local mbuzz
-- [ ] **1.3** Run against the current plugin — watch it go **RED for the stated reason** (query absent)
+- [x] **1.1** ~~Test-only mu-plugin pointing the SDK at a local API~~ — **not possible on 1.2.0**: `recordSession()` re-runs `Bootstrap::boot()` on a first visit, which resets any redirect, and `setApiUrlForTesting()` only exists from 2.0.0. **Took the fallback:** the production API as the `sk_test_` account (as `page-cache.sh` already did), read back by the minted visitor cookie via a read-only runner (`MBUZZ_SESSION_LOOKUP` overrides the reader)
+- [x] **1.2** `page-cache.sh`: click-ID scenario added. It sends a real browser user agent — curl's own is classified a bot and the session vanishes, which first read as a different bug
+- [x] **1.3** **RED for the stated reason** on the unfixed plugin: *"the session reached the API without the query string (fbclid= utm_source=)"*
 
 ### Phase 2 — Fix (GREEN)
 
-- [ ] **2.1** `RequestUriTest` RED → `Tracking\RequestUri` GREEN
-- [ ] **2.2** `SessionControllerTest` for the handoff → `recordSession()` uses it
-- [ ] **2.3** Full unit suite green
-- [ ] **2.4** `page-cache.sh` GREEN, all checks
+- [x] **2.1** `RequestUriTest` RED → `Tracking\RequestUri` GREEN (9 states)
+- [x] **2.2** `SessionControllerTest`: the session payload's `url` keeps the query (RED: `http://example.com/centres/beresfield/`) and `REQUEST_URI` is restored → `recordSession()` uses `RequestUri`
+- [x] **2.3** Full unit suite green — 174 tests (5 pre-existing deprecations in untouched test files)
+- [x] **2.4** `page-cache.sh` GREEN, 7/7
 
 ### Phase 3 — Ship
 

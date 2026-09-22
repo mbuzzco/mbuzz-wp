@@ -35,6 +35,7 @@ use Mbuzz\WP\Plugin;
 use Mbuzz\WP\Bootstrap;
 use Mbuzz\WP\Privacy\Consent;
 use Mbuzz\WP\Settings\Repository as SettingsRepository;
+use Mbuzz\WP\Tracking\RequestUri;
 use Mbuzz\WP\Tracking\TrackingEngine;
 use Mbuzz\WP\Visitor\CookieBootstrap;
 
@@ -136,9 +137,10 @@ final class SessionController
             'HTTP_SEC_FETCH_DEST' => $_SERVER['HTTP_SEC_FETCH_DEST'] ?? null,
         ];
 
-        $path = wp_parse_url($page[self::PARAM_URL], PHP_URL_PATH);
-
-        $_SERVER['REQUEST_URI']         = is_string($path) && $path !== '' ? $path : '/';
+        // Path AND query: the query is where every fbclid, gclid and utm_*
+        // lives. Rebuilding from the path alone lost every ad click on a
+        // cached page (2026-09-22, lib/specs/query-string-capture-spec.md).
+        $_SERVER['REQUEST_URI']         = RequestUri::fromPageUrl($page[self::PARAM_URL]);
         $_SERVER['HTTP_SEC_FETCH_MODE'] = 'navigate';
         $_SERVER['HTTP_SEC_FETCH_DEST'] = 'document';
 

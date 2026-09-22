@@ -162,6 +162,46 @@ stripped_cookie="$(session_cookie_from "$PROXY_URL")"
                           || bad "Set-Cookie stripped ⇒ no visitor, so nothing can be attributed"
 
 echo
+info "Click IDs: the session keeps the landing page's query string"
+#
+# The session endpoint is a POST, so no cache stores it — this is not a cache
+# mode, it is the path every cached page takes. On 2026-09-22 it rebuilt
+# REQUEST_URI from the page URL's path alone, so fbclid, gclid and utm_* never
+# reached the SDK: BSA's Meta ad visits all landed as organic_social, and a
+# controlled visit with ?fbclid landed as direct.
+#
+# Read back from the API the session actually reached. The bundled SDK (1.2.0)
+# cannot be pointed at a local API, so the session goes where a real install's
+# does — the production API, as the sk_test_ account — and is found by the
+# visitor cookie this request mints. MBUZZ_SESSION_LOOKUP overrides the reader.
+token="MBZHARNESS$(date +%s)"
+landing="$WP_URL/?fbclid=${token}&utm_source=facebook&utm_medium=paid_social"
+lookup="${MBUZZ_SESSION_LOOKUP:-ssh -o BatchMode=yes root@68.183.173.51}"
+
+# A real browser's user agent: the API discards bot traffic, and curl's own
+# UA is exactly that — the session would vanish and read as a different bug.
+browser_ua="Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 [FBAN/FBIOS]"
+
+click_visitor="$(curl -s -i -X POST "$WP_URL/wp-json/mbuzz/v1/session" \
+  -H "Content-Type: application/json" -H "Origin: $WP_URL" -A "$browser_ua" \
+  -d '{"url":"'"$landing"'","referrer":"https://m.facebook.com/"}' \
+  | tr -d '\r' | sed -n "s/^[Ss]et-[Cc]ookie: ${COOKIE}=\([^;]*\).*/\1/p" | head -1)"
+sleep 5   # the SDK posts at shutdown; give the API a moment to write the row
+
+reader='v = Visitor.find_by(visitor_id: ARGV[0]); s = v && v.sessions.order(:started_at).last; puts(s ? "SESSION fbclid=#{s.click_ids.to_h["fbclid"]} utm_source=#{s.initial_utm.to_h["utm_source"]}" : "NONE")'
+found="$($lookup "docker exec \$(docker ps --format '{{.Names}}' | grep multibuzz-web | head -1) bin/rails runner '$reader' $click_visitor" 2>/dev/null | grep -E '^(SESSION|NONE)')"
+
+if [ -z "$click_visitor" ]; then
+  bad "the endpoint minted no visitor — nothing to read back"
+elif [ "$found" = "SESSION fbclid=${token} utm_source=facebook" ]; then
+  ok "the session carries the ad click (fbclid + utm_source)"
+elif [ "${found%% *}" = "SESSION" ]; then
+  bad "the session reached the API without the query string (${found#SESSION }) — every paid click is lost"
+else
+  bad "no session reached the API for this visitor (${found:-no reply from the reader})"
+fi
+
+echo
 echo "─────────────────────────────────────────"
 echo "  passed: $pass   failed: $fail"
 [ "$fail" -eq 0 ] && echo "  the plugin survives a full-page cache" \
