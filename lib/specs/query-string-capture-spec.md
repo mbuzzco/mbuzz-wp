@@ -1,0 +1,179 @@
+# Keep the landing page's query string on the cached-page session path
+
+**Date:** 2026-09-22
+**Priority:** P0 — every paid click on every cached WordPress site is lost
+**Status:** Ready
+**Repo:** `mbuzz-wp`. Format follows `mbuzz/lib/specs/GUIDE.md`.
+**Related:** `mbuzz/lib/specs/capi_deployment_spec.md` §3 (where this was found);
+`mbuzz/lib/specs/old/page_cache_attribution_rollout_spec.md` (the path that introduced it).
+
+---
+
+## Summary
+
+On a cached page, the plugin records the visitor's session through its own REST endpoint. That
+endpoint keeps the page's **path** and throws the **query string** away, so the session never
+sees `fbclid`, `gclid` or any `utm_*`. Every ad click on a cached site therefore arrives in mbuzz
+as organic, social or direct. At BSA that is ~19,000 Meta ad visits a month recorded as
+`organic_social`, and almost certainly the Google shortfall too ($206k of paid search → 138
+`paid_search` sessions in 90 days). Attribution, CAPI and every channel report downstream are
+built on it. The fix is one line; the release is the work.
+
+---
+
+## Current State
+
+### Evidence (production, 2026-09-22)
+
+| Observation | Source |
+|---|---|
+| 19,463 of 27,919 BSA sessions in 30 days are `organic_social`; 99% in the FB/IG in-app browser; **0** carry `fbclid`, `_fbc` or any UTM | read-only runner |
+| 73 sessions (~2/day) did keep an `fbclid` — consistent with uncached server renders | read-only runner |
+| Controlled visit to `…/murray-bridge-childcare/?fbclid=MBZTEST20260922&utm_source=facebook&utm_medium=paid_social&utm_campaign=mbuzz_test` → session `direct`, `click_ids: {}`, `utm: {}` | Vlad, 13:55 AEST |
+| The plugin posted `"url" => "https://brightstepsacademy.com.au/centres/murray-bridge-childcare/"` for that session — **no query string** | production request log |
+| BSA's redirects (http→https, www→apex) preserve `?fbclid=` | curl |
+
+### Data flow (current)
+
+```
+browser  ──POST /wp-json/mbuzz/v1/session { url: location.href, referrer }──▶  Plugin.php:186
+  SessionController::pageContext()    esc_url_raw(url)            ✅ full URL kept
+  SessionController::recordSession()  REQUEST_URI = PHP_URL_PATH  ❌ query dropped here
+  Mbuzz::initFromRequest()            Context::extractUrl() = scheme://host + REQUEST_URI
+  ──POST /api/v1/sessions { url: "https://host/path/" }──▶  mbuzz  → no click IDs, no UTMs
+```
+
+`src/Rest/SessionController.php`, `recordSession()`:
+
+```php
+$path = wp_parse_url($page[self::PARAM_URL], PHP_URL_PATH);
+$_SERVER['REQUEST_URI'] = is_string($path) && $path !== '' ? $path : '/';
+```
+
+The non-cached path is unaffected: there `REQUEST_URI` is the real request's, query included.
+The PHP SDK's own cache endpoint (`mbuzz-php` 2.0 `SessionEndpoint`) forwards the full URL and does
+not have this bug — it is plugin-only.
+
+---
+
+## Proposed Solution
+
+Rebuild `REQUEST_URI` the way a web server presents it: **path, plus `?query` when there is
+one.** Fragments are never part of `REQUEST_URI` (a browser does not send them), so they are
+dropped — `location.href` includes them.
+
+A small pure function in `Tracking\` (no WordPress), e.g. `RequestUri::fromPageUrl(string): string`,
+so the rule is unit-testable without Brain Monkey and the controller stays glue. Named constants for
+the `/` default, per the plugin's no-magic-strings rule.
+
+### Key Files
+
+| File | Change |
+|---|---|
+| `src/Rest/SessionController.php` | `recordSession()` sets `REQUEST_URI` from the new function |
+| `src/Tracking/RequestUri.php` (new) | path + query from a page URL; fragment dropped; `/` default |
+| `tests/Unit/Tracking/RequestUriTest.php` (new) | the All States table below |
+| `tests/Unit/Rest/SessionControllerTest.php` | the SDK sees the query during `initFromRequest()` |
+| `tests/Integration/page-cache.sh` | new scenario: click IDs survive a cached page (see Testing) |
+| `mbuzz-attribution.php`, `readme.txt` | version bump + changelog |
+
+No UI. No mockup.
+
+---
+
+## All States
+
+| State | Page URL | `REQUEST_URI` handed to the SDK |
+|---|---|---|
+| Ad click | `https://site/centres/x/?fbclid=AB&utm_source=facebook` | `/centres/x/?fbclid=AB&utm_source=facebook` |
+| No query | `https://site/centres/x/` | `/centres/x/` (unchanged behaviour) |
+| Query on the root | `https://site/?gclid=G1` | `/?gclid=G1` |
+| Fragment | `https://site/x/?utm_source=a#form` | `/x/?utm_source=a` |
+| Empty query marker | `https://site/x/?` | `/x/` |
+| Encoded values | `…/?utm_campaign=spring%20sale` | encoding preserved, not decoded |
+| Blank / unparseable URL | `''` | `/` (unchanged behaviour) |
+
+---
+
+## Key Decisions
+
+| Decision | Choice | Why |
+|---|---|---|
+| Where the rule lives | Pure `Tracking\RequestUri` | Plugin's dependency rule: domain logic has no WordPress; unit-testable directly |
+| Upgrade bundled `mbuzz-php` 1.2.0 → 2.0.0 in the same release? | **No** | 2.0 is breaking (adds its own cache bootstrap). A P0 one-line fix must not ride on it |
+| Harness | Extend `tests/Integration/page-cache.sh` (wp-env + cache proxy) | The bug lives between layers — correct `pageContext`, correct SDK, wrong handoff. Only a real WordPress behind a real cache shows it |
+| Harness read-back | wp-env → **local mbuzz**, read by visitor id from the dev verification endpoint; a test-only mu-plugin under `tests/Integration/` points the bundled SDK at the local API when the key is `sk_test_` | 1.2.0 has no `setApiUrlForTesting()`; nothing test-only ships in the zip. **Fallback** if the SDK cannot be redirected: the production API with the `sk_test_` key, read back by a unique `fbclid` token |
+| Delivery | GitHub Release zip → manual upload on BSA | No auto-updates yet (`self-hosted-auto-updates-spec.md`, Draft). Manual replace once 500'd a live site, so the wp-env pre-ship gate is mandatory |
+
+---
+
+## Acceptance Criteria
+
+- [ ] Every row of **All States** holds (`RequestUriTest`)
+- [ ] During `recordSession()`, `Mbuzz::initFromRequest()` sees `REQUEST_URI` with the query (`SessionControllerTest`)
+- [ ] `REQUEST_URI` is restored after the call, as today
+- [ ] **Harness RED on the current plugin:** a cached page loaded with `?fbclid=<token>&utm_source=facebook&utm_medium=paid_social` produces a session with **no** `fbclid` and no UTM
+- [ ] **Harness GREEN after the fix:** the same session carries `click_ids.fbclid == <token>` and `utm_source == facebook`
+- [ ] Existing `page-cache.sh` checks still pass (visitor minted, distinct ids, stripped Set-Cookie)
+- [ ] wp-env pre-ship gate: plugin active, logged-out front-end page with an API key → HTTP 200, no critical error
+- [ ] Release zip built with `bin/build.sh`, attached to a GitHub Release, downloaded back and its version checked
+- [ ] **On BSA after upgrade:** a controlled visit with `?fbclid=…` yields a session with the click ID, and `paid_social` sessions per day move from ~2 toward the ad volume
+
+---
+
+## Implementation Tasks
+
+### Phase 1 — Harness first (RED)
+
+- [ ] **1.1** Test-only mu-plugin under `tests/Integration/` that points the SDK at a local API for `sk_test_` keys; wire it into wp-env via `.wp-env.override.json` (gitignored)
+- [ ] **1.2** `page-cache.sh`: add the click-ID scenario; read the session back from local mbuzz
+- [ ] **1.3** Run against the current plugin — watch it go **RED for the stated reason** (query absent)
+
+### Phase 2 — Fix (GREEN)
+
+- [ ] **2.1** `RequestUriTest` RED → `Tracking\RequestUri` GREEN
+- [ ] **2.2** `SessionControllerTest` for the handoff → `recordSession()` uses it
+- [ ] **2.3** Full unit suite green
+- [ ] **2.4** `page-cache.sh` GREEN, all checks
+
+### Phase 3 — Ship
+
+- [ ] **3.1** Version bump (patch on 0.7.x) + `readme.txt` changelog
+- [ ] **3.2** wp-env pre-ship gate
+- [ ] **3.3** `bin/build.sh` → GitHub Release → verify the asset
+- [ ] **3.4** Vlad/agency uploads to BSA; controlled visit confirms; resume `capi_deployment_spec.md` S5
+
+### Phase 4 — Docs
+
+- [ ] **4.1** `mbuzz/lib/docs/runbook/publishing_sdks.md`: WordPress row + how a WP release is verified
+- [ ] **4.2** `mbuzz/CLAUDE.md` names `rake sdk:wp`, which does not exist — point it at `mbuzz-wp/tests/Integration/page-cache.sh`
+- [ ] **4.3** `mbuzz/lib/docs/sdk/sdk_registry.md` version + changelog line
+
+---
+
+## Testing Strategy
+
+| Test | File | Verifies |
+|---|---|---|
+| All States | `tests/Unit/Tracking/RequestUriTest.php` | path + query, fragment, blanks, encoding |
+| Handoff | `tests/Unit/Rest/SessionControllerTest.php` | the SDK sees the query; `$_SERVER` restored |
+| End to end | `tests/Integration/page-cache.sh` | real WordPress, real cache, real SDK wire → session carries the click ID |
+| Production | controlled visit on BSA | the click ID survives on the live site |
+
+---
+
+## Definition of Done
+
+- [ ] Acceptance criteria met; harness went RED then GREEN
+- [ ] Released, verified on the GitHub Release, installed on BSA, confirmed by a controlled visit
+- [ ] Runbook, registry doc and `mbuzz/CLAUDE.md` updated
+- [ ] Spec updated with final state, then moved to `lib/specs/old/`
+
+---
+
+## Out of Scope
+
+- Upgrading the bundled `mbuzz-php` to 2.0.0
+- Self-hosted auto-updates (its own spec)
+- Recovering historical sessions — the query strings were never stored anywhere, so the last ~months of BSA's paid clicks cannot be reattributed
+- The send-rate popover and the "send every mapped event" mode (`capi_deployment_spec.md`)
