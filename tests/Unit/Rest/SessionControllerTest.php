@@ -32,7 +32,7 @@ class SessionControllerTest extends TestCase
         Monkey\setUp();
         $this->captured   = [];
         $this->cookiesSet = [];
-        unset($_COOKIE[CookieManager::VISITOR_COOKIE]);
+        unset($_COOKIE[CookieManager::VISITOR_COOKIE], $_COOKIE[CookieManager::FBP_COOKIE]);
 
         Functions\when('sanitize_text_field')->alias(static fn ($v) => trim((string) $v));
         Functions\when('esc_url_raw')->returnArg();
@@ -55,7 +55,7 @@ class SessionControllerTest extends TestCase
         SessionController::setReinitialiserForTests(null);
         Mbuzz::reset();
         Monkey\tearDown();
-        unset($_COOKIE[CookieManager::VISITOR_COOKIE], $_SERVER['HTTP_HOST'], $_SERVER['HTTPS']);
+        unset($_COOKIE[CookieManager::VISITOR_COOKIE], $_COOKIE[CookieManager::FBP_COOKIE], $_SERVER['HTTP_HOST'], $_SERVER['HTTPS']);
     }
 
     public function testMintsAVisitorCookieWhenThePageCouldNotSetOne(): void
@@ -151,6 +151,51 @@ class SessionControllerTest extends TestCase
 
         $this->assertSame(204, $res->get_status());
         $this->assertSame([], $this->captured);
+    }
+
+    /**
+     * B7. Under CAPI the browser Pixel's Lead and mbuzz's server Lead can only be
+     * merged on event_name + fbp, and fbp is a cookie the Pixel writes on the
+     * site's own domain, so it is in $_COOKIE on this same-origin call. The
+     * endpoint must hand it to the SDK, which forwards it on the session.
+     */
+    public function testTheSessionForwardsTheMetaPixelsFbp(): void
+    {
+        $_COOKIE[CookieManager::FBP_COOKIE] = 'fb.1.1758585600000.1234567890';
+        $this->arrange();
+
+        SessionController::handle($this->request(['url' => 'https://example.com/centres/beresfield/']));
+
+        $this->assertSame('fb.1.1758585600000.1234567890', $this->sessionCalls()[0]['payload']['session']['fbp'] ?? null);
+    }
+
+    public function testTheSessionOmitsFbpWhenThePixelHasNotSetOne(): void
+    {
+        $this->arrange();
+
+        SessionController::handle($this->request(['url' => 'https://example.com/centres/beresfield/']));
+
+        $this->assertArrayNotHasKey('fbp', $this->sessionCalls()[0]['payload']['session']);
+    }
+
+    public function testTheSessionNeverForwardsAMalformedFbp(): void
+    {
+        $_COOKIE[CookieManager::FBP_COOKIE] = 'not-a-meta-cookie';
+        $this->arrange();
+
+        SessionController::handle($this->request(['url' => 'https://example.com/centres/beresfield/']));
+
+        $this->assertArrayNotHasKey('fbp', $this->sessionCalls()[0]['payload']['session']);
+    }
+
+    public function testNeverWritesTheFbpCookie(): void
+    {
+        $_COOKIE[CookieManager::FBP_COOKIE] = 'fb.1.1758585600000.1234567890';
+        $this->arrange();
+
+        SessionController::handle($this->request(['url' => 'https://example.com/centres/beresfield/']));
+
+        $this->assertNotContains(CookieManager::FBP_COOKIE, array_column($this->cookiesSet, 'name'));
     }
 
     // --- helpers ---

@@ -213,6 +213,34 @@ else
 fi
 
 echo
+info "fbp: the session keeps the Meta Pixel's _fbp (B7)"
+#
+# Under CAPI the browser Pixel's Lead and mbuzz's server Lead can only be merged
+# on event_name + fbp, and fbp is a cookie the Pixel writes on the site's own
+# domain. The session endpoint is same-origin, so the browser sends it; the SDK
+# (mbuzz-php >= 1.2.2) must forward it and the API must store it. Read back from
+# the API the same way as the click-ID check above.
+fbp_value="fb.1.$(date +%s)000.$RANDOM$RANDOM"
+fbp_visitor="$(curl -s -i -X POST "$WP_URL/wp-json/mbuzz/v1/session" \
+  -H "Content-Type: application/json" -H "Origin: $WP_URL" -H "Cookie: _fbp=${fbp_value}" -A "$browser_ua" \
+  -d '{"url":"'"$WP_URL"'/","referrer":""}' \
+  | tr -d '\r' | sed -n "s/^[Ss]et-[Cc]ookie: ${COOKIE}=\([^;]*\).*/\1/p" | head -1)"
+sleep 5
+
+fbp_reader='v = Visitor.find_by(visitor_id: ARGV[0]); s = v && v.sessions.order(:started_at).last; puts(s ? "SESSION fbp=#{s.fbp}" : "NONE")'
+fbp_found="$($lookup "docker exec \$(docker ps --format '{{.Names}}' | grep multibuzz-web | head -1) bin/rails runner '$fbp_reader' $fbp_visitor" 2>/dev/null | grep -E '^(SESSION|NONE)')"
+
+if [ -z "$fbp_visitor" ]; then
+  bad "the endpoint minted no visitor — nothing to read back"
+elif [ "$fbp_found" = "SESSION fbp=${fbp_value}" ]; then
+  ok "the session carries the Pixel's _fbp"
+elif [ "${fbp_found%% *}" = "SESSION" ]; then
+  bad "the session reached the API without the _fbp (${fbp_found#SESSION }) — server events cannot be merged with the Pixel's"
+else
+  bad "no session reached the API for this visitor (${fbp_found:-no reply from the reader})"
+fi
+
+echo
 info "Mode 3: an ad click lands on a cached page, in a real browser"
 #
 # What happens on BSA: Cloudflare serves the centre page as a stored file, PHP
