@@ -221,8 +221,12 @@ info "fbp: the session keeps the Meta Pixel's _fbp (B7)"
 # (mbuzz-php >= 1.2.2) must forward it and the API must store it. Read back from
 # the API the same way as the click-ID check above.
 fbp_value="fb.1.$(date +%s)000.$RANDOM$RANDOM"
+# Its own user agent: the API keys a device on SHA256(ip|user_agent) inside a
+# 30-minute window, so reusing the click-ID check's UA from the same IP lands on
+# THAT session and this visitor gets none (NONE). Still a real browser string.
+fbp_ua="$browser_ua Build/$RANDOM$RANDOM"
 fbp_visitor="$(curl -s -i -X POST "$WP_URL/wp-json/mbuzz/v1/session" \
-  -H "Content-Type: application/json" -H "Origin: $WP_URL" -H "Cookie: _fbp=${fbp_value}" -A "$browser_ua" \
+  -H "Content-Type: application/json" -H "Origin: $WP_URL" -H "Cookie: _fbp=${fbp_value}" -A "$fbp_ua" \
   -d '{"url":"'"$WP_URL"'/","referrer":""}' \
   | tr -d '\r' | sed -n "s/^[Ss]et-[Cc]ookie: ${COOKIE}=\([^;]*\).*/\1/p" | head -1)"
 sleep 5
