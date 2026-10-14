@@ -4,7 +4,7 @@ Tags: attribution, analytics, woocommerce, marketing, conversion-tracking
 Requires at least: 6.5
 Tested up to: 6.7
 Requires PHP: 8.1
-Stable tag: 0.7.2-alpha
+Stable tag: 0.7.3-alpha
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -54,6 +54,9 @@ Reporting lives at app.mbuzz.co. This plugin handles capture and configuration
 only.
 
 == Changelog ==
+
+= 0.7.3-alpha =
+* **Meta's browser ID is now passed on when your site sets it server-side.** If another plugin writes the `_fbp` cookie from the server (Meta's own tools do, with an extra suffix on the value), it was being ignored, so a conversion could not be matched to the Pixel's. The value is now forwarded as-is. Malformed values are still dropped.
 
 = 0.7.2-alpha =
 * **Meta's browser ID is now passed to mbuzz.** When a visitor's browser holds the `_fbp` cookie set by the Meta Pixel, it is forwarded with the visit (never written or changed). This lets Meta match a server-side conversion to the same one the Pixel reported, so a lead is counted once instead of twice.
