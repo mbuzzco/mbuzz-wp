@@ -220,29 +220,47 @@ info "fbp: the session keeps the Meta Pixel's _fbp (B7)"
 # domain. The session endpoint is same-origin, so the browser sends it; the SDK
 # (mbuzz-php >= 1.2.2) must forward it and the API must store it. Read back from
 # the API the same way as the click-ID check above.
-fbp_value="fb.1.$(date +%s)000.$RANDOM$RANDOM"
-# Its own user agent: the API keys a device on SHA256(ip|user_agent) inside a
-# 30-minute window, so reusing the click-ID check's UA from the same IP lands on
-# THAT session and this visitor gets none (NONE). Still a real browser string.
-fbp_ua="$browser_ua Build/$RANDOM$RANDOM"
-fbp_visitor="$(curl -s -i -X POST "$WP_URL/wp-json/mbuzz/v1/session" \
-  -H "Content-Type: application/json" -H "Origin: $WP_URL" -H "Cookie: _fbp=${fbp_value}" -A "$fbp_ua" \
-  -d '{"url":"'"$WP_URL"'/","referrer":""}' \
-  | tr -d '\r' | sed -n "s/^[Ss]et-[Cc]ookie: ${COOKIE}=\([^;]*\).*/\1/p" | head -1)"
-sleep 5
-
+fbp_base="fb.1.$(date +%s)000.$RANDOM$RANDOM"
 fbp_reader='v = Visitor.find_by(visitor_id: ARGV[0]); s = v && v.sessions.order(:started_at).last; puts(s ? "SESSION fbp=#{s.fbp}" : "NONE")'
-fbp_found="$($lookup "docker exec \$(docker ps --format '{{.Names}}' | grep multibuzz-web | head -1) bin/rails runner '$fbp_reader' $fbp_visitor" 2>/dev/null | grep -E '^(SESSION|NONE)')"
 
-if [ -z "$fbp_visitor" ]; then
-  bad "the endpoint minted no visitor — nothing to read back"
-elif [ "$fbp_found" = "SESSION fbp=${fbp_value}" ]; then
-  ok "the session carries the Pixel's _fbp"
-elif [ "${fbp_found%% *}" = "SESSION" ]; then
-  bad "the session reached the API without the _fbp (${fbp_found#SESSION }) — server events cannot be merged with the Pixel's"
-else
-  bad "no session reached the API for this visitor (${fbp_found:-no reply from the reader})"
-fi
+# Posts the session call as one browser holding `_fbp=$1` and reads the stored
+# session's fbp back. Each call gets its own user agent: the API keys a device on
+# SHA256(ip|user_agent) inside a 30-minute window, so reusing one from the same IP
+# lands on THAT session and the visitor gets none (NONE). Still a real browser string.
+# Prints "<visitor>|<SESSION fbp=...|NONE>".
+fbp_roundtrip() {
+  local value="$1" ua visitor found
+  ua="$browser_ua Build/$RANDOM$RANDOM"
+  visitor="$(curl -s -i -X POST "$WP_URL/wp-json/mbuzz/v1/session" \
+    -H "Content-Type: application/json" -H "Origin: $WP_URL" -H "Cookie: _fbp=${value}" -A "$ua" \
+    -d '{"url":"'"$WP_URL"'/","referrer":""}' \
+    | tr -d '\r' | sed -n "s/^[Ss]et-[Cc]ookie: ${COOKIE}=\([^;]*\).*/\1/p" | head -1)"
+  sleep 5
+  found="$($lookup "docker exec \$(docker ps --format '{{.Names}}' | grep multibuzz-web | head -1) bin/rails runner '$fbp_reader' $visitor" 2>/dev/null | grep -E '^(SESSION|NONE)')"
+  echo "${visitor}|${found}"
+}
+
+# $1 label, $2 cookie value, $3 the fbp the session must hold ("" = dropped).
+check_fbp() {
+  local label="$1" value="$2" expected="$3" out visitor found
+  out="$(fbp_roundtrip "$value")"; visitor="${out%%|*}"; found="${out#*|}"
+
+  if [ -z "$visitor" ]; then
+    bad "$label: the endpoint minted no visitor — nothing to read back"
+  elif [ "$found" = "SESSION fbp=${expected}" ]; then
+    ok "$label"
+  elif [ "${found%% *}" = "SESSION" ]; then
+    bad "$label: the session holds '${found#SESSION fbp=}', expected '${expected}'"
+  else
+    bad "$label: no session reached the API for this visitor (${found:-no reply from the reader})"
+  fi
+}
+
+check_fbp "the session carries the Pixel's _fbp" "$fbp_base" "$fbp_base"
+# Meta's server-side Parameter Builder appends a fifth segment and Meta accepts
+# it. A 4-segment-only check turns a valid cookie into nothing.
+check_fbp "the session carries an _fbp with Meta's appendix" "${fbp_base}.AQECAQIB" "${fbp_base}.AQECAQIB"
+check_fbp "a malformed appendix is dropped, never forwarded" "${fbp_base}.a b" ""
 
 echo
 info "Mode 3: an ad click lands on a cached page, in a real browser"
