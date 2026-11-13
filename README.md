@@ -140,7 +140,7 @@ define('MBUZZ_ENABLED', true);
 define('MBUZZ_DEBUG', false);
 ```
 
-**Data-resident sites** (data must stay in one region) use a regional key (`sk_live_au_…`) and a regional host, set together in `wp-config.php` only — there is deliberately no admin field, so nothing in wp-admin can redirect where data is sent:
+**Data-resident sites** (data must stay in one region) use a regional key (`sk_live_au_…`) and a regional host, set together. Either fill in **API key** and **Regional API URL** on the Mbuzz settings page, or lock both in `wp-config.php` (the constants win and the fields show as locked):
 
 ```php
 define('MBUZZ_API_KEY', 'sk_live_au_…');

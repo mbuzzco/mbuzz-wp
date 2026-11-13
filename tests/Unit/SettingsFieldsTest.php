@@ -81,4 +81,26 @@ class SettingsFieldsTest extends TestCase
 
         $this->assertSame(['/foo', '/bar', '/baz'], $clean['skip_paths']);
     }
+
+    public function testApiUrlIsSavedWithoutATrailingSlash(): void
+    {
+        $clean = Fields::sanitize(['api_url' => ' https://ingest.example.com.au/api/v1/ ']);
+
+        $this->assertSame('https://ingest.example.com.au/api/v1', $clean['api_url']);
+    }
+
+    public function testPlainHttpApiUrlIsDroppedAndReported(): void
+    {
+        Functions\expect('add_settings_error')->once();
+        Functions\when('__')->returnArg();
+
+        $clean = Fields::sanitize(['api_url' => 'http://ingest.example.com.au/api/v1']);
+
+        $this->assertSame('', $clean['api_url']);
+    }
+
+    public function testBlankApiUrlClearsIt(): void
+    {
+        $this->assertSame('', Fields::sanitize(['api_url' => ''])['api_url']);
+    }
 }

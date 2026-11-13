@@ -41,6 +41,9 @@ final class Fields
                     : '';
             }
         }
+        if (! Repository::isLocked('api_url')) {
+            $clean['api_url'] = self::sanitizeApiUrl($input['api_url'] ?? '');
+        }
         if (! Repository::isLocked('enabled')) {
             $clean['enabled'] = ! empty($input['enabled']);
         }
@@ -63,5 +66,29 @@ final class Fields
         }
 
         return $clean;
+    }
+
+    /**
+     * The regional ingest host. https only, no trailing slash; anything else is dropped (and reported) rather
+     * than saved, so a typo cannot silently point tracking somewhere unintended. Blank clears it.
+     *
+     * @param mixed $submitted
+     */
+    private static function sanitizeApiUrl($submitted): string
+    {
+        $value = rtrim(trim(sanitize_text_field((string) $submitted)), '/');
+        if ($value === '' || str_starts_with($value, 'https://')) {
+            return $value;
+        }
+
+        if (function_exists('add_settings_error')) {
+            add_settings_error(
+                Repository::OPTION_KEY,
+                'mbuzz_api_url',
+                __('The regional API URL must start with https:// and was not saved.', 'mbuzz-attribution')
+            );
+        }
+
+        return '';
     }
 }

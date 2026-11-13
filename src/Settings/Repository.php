@@ -42,9 +42,10 @@ final class Repository
         if (defined('MBUZZ_API_KEY')) {
             $merged['api_key'] = (string) MBUZZ_API_KEY;
         }
-        // The ingest host is code-level configuration only: never read from the
-        // stored option, so nothing in wp-admin can redirect where data is sent.
-        $merged['api_url'] = defined('MBUZZ_API_URL') ? (string) MBUZZ_API_URL : '';
+        // The regional ingest host: the settings field, or MBUZZ_API_URL (which wins and locks the field).
+        if (defined('MBUZZ_API_URL')) {
+            $merged['api_url'] = (string) MBUZZ_API_URL;
+        }
         if (defined('MBUZZ_ENABLED')) {
             $merged['enabled'] = (bool) MBUZZ_ENABLED;
         }

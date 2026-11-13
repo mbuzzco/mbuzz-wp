@@ -71,6 +71,20 @@ final class Page
         }
         echo '</td></tr>';
 
+        echo '<tr><th scope="row"><label for="mbuzz_api_url">' . esc_html__('Regional API URL', 'mbuzz-attribution') . '</label></th><td>';
+        if (Repository::isLocked('api_url')) {
+            printf('<input type="text" class="regular-text" value="%s" disabled>', esc_attr((string) $settings['api_url']));
+            echo '<p class="description">' . esc_html__('Locked by wp-config.php (MBUZZ_API_URL).', 'mbuzz-attribution') . '</p>';
+        } else {
+            printf(
+                '<input type="url" id="mbuzz_api_url" name="%s[api_url]" value="%s" class="regular-text" autocomplete="off" placeholder="https://…">',
+                esc_attr($option),
+                esc_attr((string) $settings['api_url'])
+            );
+            echo '<p class="description">' . esc_html__('Only for accounts with a regional API key (it starts sk_live_au_…). Paste the regional address you were given; it must start with https://. Leave blank for a normal key. The key and this address must be set together, or tracking stays off.', 'mbuzz-attribution') . '</p>';
+        }
+        echo '</td></tr>';
+
         self::checkboxRow($option, 'enabled', __('Enable tracking', 'mbuzz-attribution'), (bool) $settings['enabled'], Repository::isLocked('enabled'), __('Master switch. Turn off to stop all tracking.', 'mbuzz-attribution'));
         self::checkboxRow($option, 'track_admins', __('Track logged-in admins', 'mbuzz-attribution'), (bool) $settings['track_admins'], false, __('Off by default so internal QA does not pollute attribution.', 'mbuzz-attribution'));
         self::checkboxRow($option, 'debug', __('Debug logging', 'mbuzz-attribution'), (bool) $settings['debug'], Repository::isLocked('debug'), __('Logs API calls to wp-content/debug.log (requires WP_DEBUG_LOG).', 'mbuzz-attribution'));
@@ -100,6 +114,11 @@ final class Page
             echo '<span style="color:#b32d2e">' . esc_html__('not set — tracking is inactive', 'mbuzz-attribution') . '</span>';
         }
         echo '</p>';
+
+        if ($settings['api_url'] !== '') {
+            echo '<p><strong>' . esc_html__('Sending to:', 'mbuzz-attribution') . '</strong> '
+                . esc_html((string) wp_parse_url((string) $settings['api_url'], PHP_URL_HOST)) . '</p>';
+        }
 
         self::renderLastPageView();
         self::renderLastSubmission();

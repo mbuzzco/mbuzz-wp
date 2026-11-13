@@ -4,7 +4,7 @@ Tags: attribution, analytics, woocommerce, marketing, conversion-tracking
 Requires at least: 6.5
 Tested up to: 6.7
 Requires PHP: 8.1
-Stable tag: 0.8.0-alpha
+Stable tag: 0.8.1-alpha
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -54,6 +54,9 @@ Reporting lives at app.mbuzz.co. This plugin handles capture and configuration
 only.
 
 == Changelog ==
+
+= 0.8.1-alpha =
+* **The regional address can now be set on the Mbuzz settings page.** New "Regional API URL" field under the API key, for accounts with a regional key (it starts `sk_live_au_`). It must start with `https://`; anything else is rejected and not saved. The key and the address must be set together, or tracking stays off and the site carries on working. If `MBUZZ_API_URL` is set in `wp-config.php` it wins and the field shows as locked. The settings page also shows which host data is being sent to.
 
 = 0.8.0-alpha =
 * **Sites that must keep their data in one region can now point the plugin at a regional host.** Add `define( 'MBUZZ_API_URL', 'https://<your regional host>/api/v1' );` to `wp-config.php` alongside a regional API key (it starts `sk_live_au_`). The two must be set together: if they do not match, or the address is not `https`, tracking stays off and your site carries on working. It cannot be changed from the WordPress admin. Sites that do not set it behave exactly as before.
