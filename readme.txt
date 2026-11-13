@@ -4,7 +4,7 @@ Tags: attribution, analytics, woocommerce, marketing, conversion-tracking
 Requires at least: 6.5
 Tested up to: 6.7
 Requires PHP: 8.1
-Stable tag: 0.7.4-alpha
+Stable tag: 0.8.0-alpha
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -54,6 +54,9 @@ Reporting lives at app.mbuzz.co. This plugin handles capture and configuration
 only.
 
 == Changelog ==
+
+= 0.8.0-alpha =
+* **Sites that must keep their data in one region can now point the plugin at a regional host.** Add `define( 'MBUZZ_API_URL', 'https://<your regional host>/api/v1' );` to `wp-config.php` alongside a regional API key (it starts `sk_live_au_`). The two must be set together: if they do not match, or the address is not `https`, tracking stays off and your site carries on working. It cannot be changed from the WordPress admin. Sites that do not set it behave exactly as before.
 
 = 0.7.4-alpha =
 * **The visitor's IP address is now passed on with each visit.** The IP was being left out, so Meta flagged every server-side lead as sending a browser with no IP address, which weakens matching and attribution. It is forwarded as the visitor's address only, and mbuzz discards private and server addresses.

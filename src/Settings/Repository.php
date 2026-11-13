@@ -18,6 +18,7 @@ final class Repository
     /**
      * @return array{
      *   api_key: string,
+     *   api_url: string,
      *   enabled: bool,
      *   debug: bool,
      *   track_admins: bool,
@@ -41,6 +42,9 @@ final class Repository
         if (defined('MBUZZ_API_KEY')) {
             $merged['api_key'] = (string) MBUZZ_API_KEY;
         }
+        // The ingest host is code-level configuration only: never read from the
+        // stored option, so nothing in wp-admin can redirect where data is sent.
+        $merged['api_url'] = defined('MBUZZ_API_URL') ? (string) MBUZZ_API_URL : '';
         if (defined('MBUZZ_ENABLED')) {
             $merged['enabled'] = (bool) MBUZZ_ENABLED;
         }
@@ -65,6 +69,7 @@ final class Repository
     {
         return [
             'api_key'                       => '',
+            'api_url'                       => '',
             'enabled'                       => true,
             'debug'                         => false,
             'track_admins'                  => false,
@@ -83,6 +88,7 @@ final class Repository
     {
         return match ($key) {
             'api_key' => defined('MBUZZ_API_KEY'),
+            'api_url' => defined('MBUZZ_API_URL'),
             'enabled' => defined('MBUZZ_ENABLED'),
             'debug'   => defined('MBUZZ_DEBUG'),
             default   => false,

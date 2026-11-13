@@ -10,6 +10,7 @@ declare(strict_types=1);
 
 namespace Mbuzz\WP;
 
+use Mbuzz\Config;
 use Mbuzz\Mbuzz;
 use Mbuzz\WP\Identity\Hooks as IdentityHooks;
 use Mbuzz\WP\Integrations\ContactForm7;
@@ -226,7 +227,10 @@ final class Plugin
     {
         $settings = SettingsRepository::current();
         Bootstrap::boot($settings);
-        $this->sdkReady = $settings['api_key'] !== '';
+        // Ready only if the SDK really initialised: Bootstrap leaves it
+        // uninitialised when it refuses a key/host pairing, and every caller
+        // is gated on this flag, so a refusal can never fatal the front end.
+        $this->sdkReady = $settings['api_key'] !== '' && Config::getInstance()->isInitialized();
     }
 
     public function initFromRequest(): void

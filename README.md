@@ -140,6 +140,15 @@ define('MBUZZ_ENABLED', true);
 define('MBUZZ_DEBUG', false);
 ```
 
+**Data-resident sites** (data must stay in one region) use a regional key (`sk_live_au_…`) and a regional host, set together in `wp-config.php` only — there is deliberately no admin field, so nothing in wp-admin can redirect where data is sent:
+
+```php
+define('MBUZZ_API_KEY', 'sk_live_au_…');
+define('MBUZZ_API_URL', 'https://<your regional host>/api/v1');
+```
+
+If the pair does not match, or the URL is not `https`, the SDK refuses, tracking stays off, and the front end still renders. End-to-end proof lives in the mbuzz repo (`sdk_integration_tests/scenarios/wp_api_url_test.rb`).
+
 ## What's left
 
 Shipped and planned (design specs live in `lib/specs/`):
