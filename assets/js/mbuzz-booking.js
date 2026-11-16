@@ -16,6 +16,11 @@
 	var CAPTURE_METHOD = 'captureLead';
 	var CLICK = 'click';
 	var CAPTURE_PHASE = true;
+	// One opening can be several clicks: a host page's own script may forward the
+	// click from the visible button to a hidden one. Clicks this close together
+	// are one opening.
+	var SAME_OPENING_MS = 1000;
+	var lastReportedAt = 0;
 
 	var cfg = window[ CONFIG_GLOBAL ] || {};
 	var selectors = Array.isArray( cfg.selectors ) ? cfg.selectors : [];
@@ -59,6 +64,11 @@
 			if ( ! trigger || ! api || typeof api[ CAPTURE_METHOD ] !== 'function' ) {
 				return;
 			}
+			var now = Date.now();
+			if ( now - lastReportedAt < SAME_OPENING_MS ) {
+				return;
+			}
+			lastReportedAt = now;
 			api[ CAPTURE_METHOD ]( {
 				type: cfg.event,
 				properties: { trigger: trigger, page_path: window.location.pathname }
