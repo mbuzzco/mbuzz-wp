@@ -65,7 +65,37 @@ final class Fields
             $clean['skip_paths'] = array_values(array_map('sanitize_text_field', $lines));
         }
 
+        $clean['click_events'] = self::sanitizeClickEvents($input['click_events'] ?? '');
+
         return $clean;
+    }
+
+    /** Cap on click-event rules, to bound the option row and the page payload. */
+    public const MAX_CLICK_EVENTS = 50;
+
+    /**
+     * One rule per line: `event_name = css selector`. Lines that are not a name and a selector are dropped.
+     *
+     * @param mixed $submitted
+     * @return array<int, array{event: string, selector: string}>
+     */
+    private static function sanitizeClickEvents($submitted): array
+    {
+        if (! is_string($submitted)) {
+            return [];
+        }
+
+        $rules = [];
+        foreach (explode("\n", $submitted) as $line) {
+            [$event, $selector] = array_pad(explode('=', $line, 2), 2, '');
+            $event    = sanitize_key(trim($event));
+            $selector = sanitize_text_field(trim($selector));
+            if ($event !== '' && $selector !== '') {
+                $rules[] = ['event' => $event, 'selector' => $selector];
+            }
+        }
+
+        return array_slice($rules, 0, self::MAX_CLICK_EVENTS);
     }
 
     /**

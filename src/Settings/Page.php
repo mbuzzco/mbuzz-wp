@@ -85,6 +85,15 @@ final class Page
         }
         echo '</td></tr>';
 
+        echo '<tr><th scope="row"><label for="mbuzz_click_events">' . esc_html__('Click events', 'mbuzz-attribution') . '</label></th><td>';
+        printf(
+            '<textarea id="mbuzz_click_events" name="%s[click_events]" rows="4" class="large-text code" placeholder="signup_click = .signup-button">%s</textarea>',
+            esc_attr($option),
+            esc_textarea(self::clickEventLines((array) $settings['click_events']))
+        );
+        echo '<p class="description">' . esc_html__('Record an event when a visitor clicks something. One per line: an event name, an equals sign, then a CSS selector. The event carries the selector and the page path, nothing else. Leave empty to record none.', 'mbuzz-attribution') . '</p>';
+        echo '</td></tr>';
+
         self::checkboxRow($option, 'enabled', __('Enable tracking', 'mbuzz-attribution'), (bool) $settings['enabled'], Repository::isLocked('enabled'), __('Master switch. Turn off to stop all tracking.', 'mbuzz-attribution'));
         self::checkboxRow($option, 'track_admins', __('Track logged-in admins', 'mbuzz-attribution'), (bool) $settings['track_admins'], false, __('Off by default so internal QA does not pollute attribution.', 'mbuzz-attribution'));
         self::checkboxRow($option, 'debug', __('Debug logging', 'mbuzz-attribution'), (bool) $settings['debug'], Repository::isLocked('debug'), __('Logs API calls to wp-content/debug.log (requires WP_DEBUG_LOG).', 'mbuzz-attribution'));
@@ -133,6 +142,17 @@ final class Page
             echo esc_html__('none yet — browse the site (logged out) to generate one', 'mbuzz-attribution');
         }
         echo '</p>';
+    }
+
+    /**
+     * @param array<int, array{event: string, selector: string}> $rules
+     */
+    private static function clickEventLines(array $rules): string
+    {
+        return implode("\n", array_map(
+            static fn (array $rule): string => $rule['event'] . ' = ' . $rule['selector'],
+            $rules
+        ));
     }
 
     private static function checkboxRow(string $option, string $key, string $label, bool $checked, bool $locked, string $description): void

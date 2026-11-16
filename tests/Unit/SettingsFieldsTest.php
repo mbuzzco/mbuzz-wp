@@ -15,6 +15,7 @@ class SettingsFieldsTest extends TestCase
     {
         Monkey\setUp();
         Functions\when('sanitize_text_field')->returnArg();
+        Functions\when('sanitize_key')->alias(fn ($v) => strtolower(preg_replace('/[^a-z0-9_\\-]/i', '', (string) $v)));
     }
 
     protected function tearDown(): void
@@ -102,5 +103,20 @@ class SettingsFieldsTest extends TestCase
     public function testBlankApiUrlClearsIt(): void
     {
         $this->assertSame('', Fields::sanitize(['api_url' => ''])['api_url']);
+    }
+
+    public function testClickEventsAreParsedOneRulePerLine(): void
+    {
+        $clean = Fields::sanitize(['click_events' => "signup_click = .signup, .cta\n\nnot a rule\nBad Name! = .x\n= .y\nz ="]);
+
+        $this->assertSame(
+            [['event' => 'signup_click', 'selector' => '.signup, .cta'], ['event' => 'badname', 'selector' => '.x']],
+            $clean['click_events']
+        );
+    }
+
+    public function testClickEventsDefaultToNone(): void
+    {
+        $this->assertSame([], Fields::sanitize(['api_key' => 'sk_live_x'])['click_events']);
     }
 }

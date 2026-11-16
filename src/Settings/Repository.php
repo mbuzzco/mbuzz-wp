@@ -23,6 +23,7 @@ final class Repository
      *   debug: bool,
      *   track_admins: bool,
      *   skip_paths: array<string>,
+     *   click_events: array<int, array{event: string, selector: string}>,
      *   identify_at: string,
      *   wc_track_purchases: bool,
      *   wc_include_order_details: bool,
@@ -75,6 +76,7 @@ final class Repository
             'debug'                         => false,
             'track_admins'                  => false,
             'skip_paths'                    => [],
+            'click_events'                  => [],
             'identify_at'                   => 'login', // 'login' | 'every_page'
             'wc_track_purchases'            => true,
             'wc_include_order_details'      => true,

@@ -4,7 +4,7 @@ Tags: attribution, analytics, woocommerce, marketing, conversion-tracking
 Requires at least: 6.5
 Tested up to: 6.7
 Requires PHP: 8.1
-Stable tag: 0.8.3-alpha
+Stable tag: 0.8.4-alpha
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -55,7 +55,7 @@ only.
 
 == Changelog ==
 
-= 0.8.3-alpha =
+= 0.8.4-alpha =
 * **The regional address can now be set on the Mbuzz settings page.** New "Regional API URL" field under the API key, for accounts with a regional key (it starts `sk_live_au_`). It must start with `https://`; anything else is rejected and not saved. The key and the address must be set together, or tracking stays off and the site carries on working. If `MBUZZ_API_URL` is set in `wp-config.php` it wins and the field shows as locked. The settings page also shows which host data is being sent to.
 
 = 0.8.0-alpha =

@@ -13,7 +13,7 @@ namespace Mbuzz\WP;
 use Mbuzz\Config;
 use Mbuzz\Mbuzz;
 use Mbuzz\WP\Identity\Hooks as IdentityHooks;
-use Mbuzz\WP\Integrations\BookingWidget;
+use Mbuzz\WP\Integrations\ClickEvents;
 use Mbuzz\WP\Integrations\ContactForm7;
 use Mbuzz\WP\Integrations\WooCommerce;
 use Mbuzz\WP\Privacy\Consent;
@@ -139,23 +139,23 @@ final class Plugin
         wp_localize_script('mbuzz-capture', 'mbuzzCapture', [
             'endpoint' => esc_url_raw(rest_url(LeadController::NAMESPACE . LeadController::ROUTE)),
         ]);
-        $this->enqueueBookingTriggers();
+        $this->enqueueClickEvents();
     }
 
-    private function enqueueBookingTriggers(): void
+    private function enqueueClickEvents(): void
     {
-        if (! BookingWidget::enabled()) {
+        if (! ClickEvents::enabled()) {
             return;
         }
 
         wp_enqueue_script(
-            'mbuzz-booking',
-            MBUZZ_ATTRIBUTION_URL . 'assets/js/mbuzz-booking.js',
+            'mbuzz-click-events',
+            MBUZZ_ATTRIBUTION_URL . 'assets/js/mbuzz-click-events.js',
             ['mbuzz-capture'],
             MBUZZ_ATTRIBUTION_VERSION,
             true
         );
-        wp_localize_script('mbuzz-booking', 'mbuzzBooking', BookingWidget::config());
+        wp_localize_script('mbuzz-click-events', 'mbuzzClickEvents', ClickEvents::config());
     }
 
     /**
