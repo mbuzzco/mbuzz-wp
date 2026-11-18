@@ -7,9 +7,9 @@
  * Posture: when the WP Consent API (a consent-banner plugin) is active, capture
  * is gated on the configured category — defaulting to "marketing", the most
  * protective bucket for attribution that can feed ad platforms. When no Consent
- * API is present the plugin does NOT invent its own gate (the site owner's
- * cookie/consent solution governs), so it defaults to allowed. Both the
- * category and the final decision are filterable.
+ * API is present the plugin denies by default. The site owner can turn on
+ * "Track without a consent plugin" when their own cookie/consent solution
+ * governs. Both the category and the final decision are filterable.
  *
  * This is the one WordPress-aware seam the capture adapters share; the pure
  * Tracking\ domain never references it.
@@ -20,6 +20,8 @@
 declare(strict_types=1);
 
 namespace Mbuzz\WP\Privacy;
+
+use Mbuzz\WP\Settings\Repository;
 
 final class Consent
 {
@@ -41,7 +43,8 @@ final class Consent
             $category = (string) apply_filters(self::FILTER_CATEGORY, self::DEFAULT_CATEGORY);
             $granted  = wp_has_consent($category) === true;
         } else {
-            $granted = true; // no Consent API → not gated by us
+            // No Consent API: deny unless the site owner has said their own consent solution governs.
+            $granted = ! empty(Repository::current()['consent_without_plugin']);
         }
 
         return (bool) apply_filters(self::FILTER_GRANTED, $granted);

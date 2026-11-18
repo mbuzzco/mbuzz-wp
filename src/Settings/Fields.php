@@ -52,6 +52,7 @@ final class Fields
         }
 
         $clean['track_admins']                 = ! empty($input['track_admins']);
+        $clean['consent_without_plugin']       = ! empty($input['consent_without_plugin']);
         $clean['wc_track_purchases']           = ! empty($input['wc_track_purchases']);
         $clean['wc_include_order_details']     = ! empty($input['wc_include_order_details']);
         $clean['wc_mark_first_as_acquisition'] = ! empty($input['wc_mark_first_as_acquisition']);

@@ -39,6 +39,12 @@ class SettingsFieldsTest extends TestCase
         $this->assertFalse($clean['enabled']);
         $this->assertFalse($clean['debug']);
         $this->assertFalse($clean['track_admins']);
+        $this->assertFalse($clean['consent_without_plugin']);
+    }
+
+    public function testSanitizeKeepsTrackWithoutAConsentPluginWhenTicked(): void
+    {
+        $this->assertTrue(Fields::sanitize(['consent_without_plugin' => '1'])['consent_without_plugin']);
     }
 
     public function testSanitizeAcceptsValidIdentifyAt(): void

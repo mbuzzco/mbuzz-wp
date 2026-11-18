@@ -4,7 +4,7 @@ Tags: attribution, analytics, woocommerce, marketing, conversion-tracking
 Requires at least: 6.5
 Tested up to: 6.7
 Requires PHP: 8.1
-Stable tag: 0.8.4-alpha
+Stable tag: 0.9.0-alpha
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -24,7 +24,7 @@ choose to capture embedded/third-party forms; see the changelog.)
 * Identity stitching: links a chosen user ID to the visitor and their prior anonymous sessions. A non-PII unique ID is preferred; the plugin never assumes one.
 * WooCommerce purchases and refunds.
 * Conversions overview: see at a glance which forms are tracked and what they send.
-* Privacy-first: WordPress Privacy API exporter + eraser, and WP Consent API gating (defaults to the "marketing" category). Sensitive fields default to "ignore".
+* Privacy-first: WordPress Privacy API exporter + eraser, and WP Consent API gating (defaults to the "marketing" category); with no consent plugin it denies unless "Track without a consent plugin" is ticked. Sensitive fields default to "ignore".
 * Zero added latency on rendered pages — API I/O happens after the response is sent to the browser.
 
 = Requirements =
@@ -54,6 +54,9 @@ Reporting lives at app.mbuzz.co. This plugin handles capture and configuration
 only.
 
 == Changelog ==
+
+= 0.9.0-alpha =
+* **With no consent plugin installed, nothing is sent until you say so.** Before, a site with no WP Consent API plugin was treated as consented. Now the plugin sends nothing in that case, unless you tick the new **Track without a consent plugin** setting (use it only when your own cookie banner or consent solution already governs tracking). With a WP Consent API plugin active nothing changes: its marketing choice decides. **Upgrading a site that has no consent plugin stops tracking until the box is ticked.**
 
 = 0.8.4-alpha =
 * **The regional address can now be set on the Mbuzz settings page.** New "Regional API URL" field under the API key, for accounts with a regional key (it starts `sk_live_au_`). It must start with `https://`; anything else is rejected and not saved. The key and the address must be set together, or tracking stays off and the site carries on working. If `MBUZZ_API_URL` is set in `wp-config.php` it wins and the field shows as locked. The settings page also shows which host data is being sent to.
@@ -121,7 +124,7 @@ only.
 * New **Mbuzz → Conversions** overview listing every form, its tracking status, and its field mapping; the Mbuzz menu is now a hub with Conversions and Settings.
 * Identity now fires whenever a form maps a user ID (traits optional), for both conversions and events.
 * Privacy: WordPress Privacy API personal-data exporter and eraser.
-* Consent: WP Consent API gating on every capture surface (sessions, forms, identity, WooCommerce, theme helpers); defaults to the "marketing" category, filterable.
+* Consent: WP Consent API gating on every capture surface (sessions, forms, identity, WooCommerce, theme helpers); defaults to the "marketing" category, filterable. No consent plugin: denied unless the site owner ticks "Track without a consent plugin".
 * Fixed the plugin version reported on the diagnostics card.
 
 = 0.1.2-alpha =

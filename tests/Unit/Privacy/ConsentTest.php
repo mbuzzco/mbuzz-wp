@@ -10,8 +10,8 @@ use Mbuzz\WP\Privacy\Consent;
 use PHPUnit\Framework\TestCase;
 
 /**
- * The consent gate. With no Consent API present it must default to allowed
- * (the plugin doesn't invent a gate); with one present it must honor the
+ * The consent gate. With no Consent API present it must default to denied
+ * unless the site owner turns on "track without a consent plugin"; with one present it must honor the
  * category, defaulting to the most protective "marketing" bucket.
  */
 class ConsentTest extends TestCase
@@ -35,9 +35,20 @@ class ConsentTest extends TestCase
      * @runInSeparateProcess
      * @preserveGlobalState disabled
      */
-    public function testAllowedWhenNoConsentApiPresent(): void
+    public function testDeniedByDefaultWhenNoConsentApiPresent(): void
     {
-        // wp_has_consent is intentionally NOT defined → not gated by us.
+        Functions\when('get_option')->justReturn([]);
+        $this->assertFalse(function_exists('wp_has_consent'));
+        $this->assertFalse(Consent::granted());
+    }
+
+    /**
+     * @runInSeparateProcess
+     * @preserveGlobalState disabled
+     */
+    public function testAllowedWhenNoConsentApiAndTheSiteOwnerSaysSo(): void
+    {
+        Functions\when('get_option')->justReturn(['consent_without_plugin' => true]);
         $this->assertFalse(function_exists('wp_has_consent'));
         $this->assertTrue(Consent::granted());
     }

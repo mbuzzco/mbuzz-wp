@@ -22,6 +22,7 @@ final class Repository
      *   enabled: bool,
      *   debug: bool,
      *   track_admins: bool,
+     *   consent_without_plugin: bool,
      *   skip_paths: array<string>,
      *   click_events: array<int, array{event: string, selector: string}>,
      *   identify_at: string,
@@ -75,6 +76,7 @@ final class Repository
             'enabled'                       => true,
             'debug'                         => false,
             'track_admins'                  => false,
+            'consent_without_plugin'        => false,
             'skip_paths'                    => [],
             'click_events'                  => [],
             'identify_at'                   => 'login', // 'login' | 'every_page'

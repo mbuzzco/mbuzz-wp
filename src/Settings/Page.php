@@ -96,6 +96,7 @@ final class Page
 
         self::checkboxRow($option, 'enabled', __('Enable tracking', 'mbuzz-attribution'), (bool) $settings['enabled'], Repository::isLocked('enabled'), __('Master switch. Turn off to stop all tracking.', 'mbuzz-attribution'));
         self::checkboxRow($option, 'track_admins', __('Track logged-in admins', 'mbuzz-attribution'), (bool) $settings['track_admins'], false, __('Off by default so internal QA does not pollute attribution.', 'mbuzz-attribution'));
+        self::checkboxRow($option, 'consent_without_plugin', __('Track without a consent plugin', 'mbuzz-attribution'), (bool) $settings['consent_without_plugin'], false, __('Off by default: with no consent plugin installed, nothing is sent. Turn on only if your own cookie banner or consent solution already governs tracking on this site. With a WP Consent API plugin active this setting is ignored and its marketing choice decides.', 'mbuzz-attribution'));
         self::checkboxRow($option, 'debug', __('Debug logging', 'mbuzz-attribution'), (bool) $settings['debug'], Repository::isLocked('debug'), __('Logs API calls to wp-content/debug.log (requires WP_DEBUG_LOG).', 'mbuzz-attribution'));
 
         echo '</tbody></table>';
